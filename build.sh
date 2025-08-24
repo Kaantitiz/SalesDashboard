@@ -8,8 +8,8 @@ echo "📦 Paketler yükleniyor..."
 pip install -r requirements.txt
 echo "✅ Paketler yüklendi"
 
-echo "🗄️ PostgreSQL migration çalıştırılıyor..."
-python postgres_migration.py
-echo "✅ PostgreSQL migration tamamlandı"
+echo "🗄️ SQLite veritabanı oluşturuluyor..."
+python simple_db.py
+echo "✅ SQLite veritabanı oluşturuldu"
 
 echo "🎉 Build tamamlandı!"
