@@ -7,7 +7,7 @@ services:
     startCommand: gunicorn wsgi:app
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.7
+        value: 3.10.12
       - key: SECRET_KEY
         generateValue: true
       - key: JWT_SECRET_KEY
