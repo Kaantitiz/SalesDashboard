@@ -3294,3 +3294,119 @@ def reassign_user_records(from_user_id: int):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@api.route('/planning/month/delete', methods=['DELETE'])
+@admin_required
+def delete_month_planning_and_tasks():
+    """Admin: Belirli bir ay için tüm planları ve görevleri sil"""
+    try:
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
+        user_id = request.args.get('user_id', type=int)
+        
+        if not year or not month:
+            return jsonify({'success': False, 'error': 'Yıl ve ay parametreleri gerekli'}), 400
+        
+        # Tarih aralığını hesapla
+        start_date = date(year, month, 1)
+        if month == 12:
+            end_date = date(year + 1, 1, 1)
+        else:
+            end_date = date(year, month + 1, 1)
+        
+        deleted_count = 0
+        
+        # Kullanıcı belirtilmişse sadece o kullanıcının verilerini sil
+        if user_id:
+            # Planları sil
+            plans = Planning.query.filter(
+                Planning.representative_id == user_id,
+                Planning.date >= start_date,
+                Planning.date < end_date
+            ).all()
+            
+            for plan in plans:
+                db.session.delete(plan)
+                deleted_count += 1
+            
+            # Planning snapshot'ları sil
+            snapshots = PlanningSnapshot.query.filter(
+                PlanningSnapshot.representative_id == user_id,
+                PlanningSnapshot.date >= start_date,
+                PlanningSnapshot.date < end_date
+            ).all()
+            
+            for snapshot in snapshots:
+                db.session.delete(snapshot)
+                deleted_count += 1
+            
+            # Görevleri sil (o aya ait olanlar)
+            tasks = Task.query.filter(
+                (Task.assigned_to_id == user_id) | (Task.created_by_id == user_id),
+                Task.start_date >= start_date,
+                Task.start_date < end_date
+            ).all()
+            
+            for task in tasks:
+                db.session.delete(task)
+                deleted_count += 1
+                
+        else:
+            # Tüm kullanıcıların verilerini sil
+            # Planları sil
+            plans = Planning.query.filter(
+                Planning.date >= start_date,
+                Planning.date < end_date
+            ).all()
+            
+            for plan in plans:
+                db.session.delete(plan)
+                deleted_count += 1
+            
+            # Planning snapshot'ları sil
+            snapshots = PlanningSnapshot.query.filter(
+                PlanningSnapshot.date >= start_date,
+                PlanningSnapshot.date < end_date
+            ).all()
+            
+            for snapshot in snapshots:
+                db.session.delete(snapshot)
+                deleted_count += 1
+            
+            # Görevleri sil (o aya ait olanlar)
+            tasks = Task.query.filter(
+                Task.start_date >= start_date,
+                Task.start_date < end_date
+            ).all()
+            
+            for task in tasks:
+                db.session.delete(task)
+                deleted_count += 1
+        
+        db.session.commit()
+        
+        # Activity log ekle
+        try:
+            month_name = f"{year}-{month:02d}"
+            user_info = f" (Kullanıcı: {user_id})" if user_id else " (Tüm kullanıcılar)"
+            log = ActivityLog(
+                user_id=current_user.id,
+                action='month_planning_deleted',
+                description=f'{month_name} ayı planları ve görevleri silindi{user_info} - Toplam: {deleted_count} kayıt'
+            )
+            db.session.add(log)
+            db.session.commit()
+        except Exception as e:
+            print(f"Activity log hatası: {e}")
+            db.session.rollback()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'{year}-{month:02d} ayı planları ve görevleri başarıyla silindi',
+            'deleted_count': deleted_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERROR] Aylık plan silme hatası: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
