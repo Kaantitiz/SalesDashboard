@@ -133,8 +133,10 @@ def planning_today():
 @login_required
 def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
-    # Only admin can delete any task; DM can delete tasks in their department they manage; users cannot delete
+    
+    # Admin: Tüm görevleri silebilir
     if current_user.is_admin():
+        print(f"[ADMIN] Admin {current_user.username} görev {task_id} silmeye çalışıyor")
         pass
     elif current_user.is_department_manager():
         # DM: Kendi departmanına ait tüm görevleri silebilir.
@@ -158,13 +160,40 @@ def delete_task(task_id):
             return jsonify({'success': False, 'error': 'Silme yetkiniz yok'}), 403
     else:
         return jsonify({'success': False, 'error': 'Silme yetkiniz yok'}), 403
+    
     try:
+        # Görev bilgilerini logla
+        task_info = {
+            'id': task.id,
+            'title': getattr(task, 'title', 'N/A'),
+            'department_id': getattr(task, 'department_id', None),
+            'assigned_to_id': getattr(task, 'assigned_to_id', None),
+            'created_by_id': getattr(task, 'created_by_id', None)
+        }
+        
+        # Görevi sil
         db.session.delete(task)
         db.session.commit()
-        # Best-effort: cache/summary tutarlı olsun diye bir şey döndür
-        return jsonify({'success': True, 'deleted_id': task_id})
+        
+        # Activity log ekle
+        try:
+            log = ActivityLog(
+                user_id=current_user.id,
+                action='task_deleted',
+                description=f'Görev silindi: {task_info["id"]} - {task_info["title"]}'
+            )
+            db.session.add(log)
+            db.session.commit()
+        except Exception as e:
+            print(f"Activity log hatası: {e}")
+            db.session.rollback()
+        
+        print(f"[SUCCESS] Görev {task_id} başarıyla silindi. Silen: {current_user.username}")
+        return jsonify({'success': True, 'deleted_id': task_id, 'message': 'Görev başarıyla silindi'})
+        
     except Exception as e:
         db.session.rollback()
+        print(f"[ERROR] Görev silme hatası: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @api.route('/planning/months', methods=['GET'])
