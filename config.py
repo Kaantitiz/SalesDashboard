@@ -7,7 +7,7 @@ class Config:
     # Veritabanı URL'i - Production'da PostgreSQL, local'de SQLite
     DATABASE_URL = os.environ.get('DATABASE_URL')
     if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
-        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql+asyncpg://', 1)
     
     SQLALCHEMY_DATABASE_URI = DATABASE_URL or 'sqlite:///sales_dashboard.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
