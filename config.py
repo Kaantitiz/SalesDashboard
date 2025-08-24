@@ -4,21 +4,12 @@ from datetime import timedelta
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-here'
     
-    # Veritabanı URL'i - Geçici olarak SQLite kullan
+    # Veritabanı URL'i - Production'da PostgreSQL, local'de SQLite
     DATABASE_URL = os.environ.get('DATABASE_URL')
     if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
-        # PostgreSQL URL'i varsa kullan, yoksa SQLite
-        try:
-            # Test connection
-            import psycopg2
-            DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
-            SQLALCHEMY_DATABASE_URI = DATABASE_URL
-        except ImportError:
-            print("⚠️ PostgreSQL paketi bulunamadı, SQLite kullanılıyor")
-            SQLALCHEMY_DATABASE_URI = 'sqlite:///sales_dashboard.db'
-    else:
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///sales_dashboard.db'
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
     
+    SQLALCHEMY_DATABASE_URI = DATABASE_URL or 'sqlite:///sales_dashboard.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # JWT ayarları

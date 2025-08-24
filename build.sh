@@ -8,12 +8,8 @@ echo "📦 Paketler yükleniyor..."
 pip install -r requirements.txt
 echo "✅ Paketler yüklendi"
 
-echo "🗄️ Veritabanı oluşturuluyor..."
-python simple_db.py
-echo "✅ Veritabanı oluşturuldu"
-
-echo "🔍 Veritabanı kontrol ediliyor..."
-python check_db.py
-echo "✅ Veritabanı kontrol edildi"
+echo "🗄️ PostgreSQL migration çalıştırılıyor..."
+python postgres_migration.py
+echo "✅ PostgreSQL migration tamamlandı"
 
 echo "🎉 Build tamamlandı!"
