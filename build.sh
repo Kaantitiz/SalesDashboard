@@ -12,4 +12,8 @@ echo "🗄️ Veritabanı oluşturuluyor..."
 python simple_db.py
 echo "✅ Veritabanı oluşturuldu"
 
+echo "🔍 Veritabanı kontrol ediliyor..."
+python check_db.py
+echo "✅ Veritabanı kontrol edildi"
+
 echo "🎉 Build tamamlandı!"
