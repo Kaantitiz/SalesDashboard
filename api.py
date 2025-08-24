@@ -15,9 +15,6 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, and_, or_
 import io
 import base64
-import pandas as pd
-import io
-import base64
 from werkzeug.utils import secure_filename
 import os
 from werkzeug.security import generate_password_hash
@@ -1919,40 +1916,38 @@ def upload_sales_excel():
             print(f"❌ Geçersiz dosya formatı: {file.filename}")
             return jsonify({'error': 'Sadece Excel dosyaları (.xlsx, .xls) kabul edilir'}), 400
         
-        # Excel dosyasını oku
+        # Excel dosyasını oku (pandas olmadan basit okuma)
         print("📖 Excel dosyası okunuyor...")
-        df = pd.read_excel(file)
-        print(f"✅ Excel okundu: {len(df)} satır")
-        
-        # Mevcut kolonları kontrol et ve debug bilgisi
-        print(f"📊 Excel kolonları: {list(df.columns)}")
-        
-        # Gerekli kolonları kontrol et - daha esnek yaklaşım
-        required_columns = ['SATISTEMSILCISI', 'TOPLAMNETFIYAT']
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        
-        if missing_columns:
-            print(f"❌ Eksik kolonlar: {missing_columns}")
+        try:
+            # Basit Excel okuma - sadece ilk satırı oku
+            from openpyxl import load_workbook
+            wb = load_workbook(file)
+            ws = wb.active
+            
+            # Sadece ilk satırı oku (header)
+            headers = [cell.value for cell in ws[1]]
+            print(f"✅ Excel okundu: {len(headers)} kolon")
+            print(f"📊 Excel kolonları: {headers}")
+            
+            # Gerekli kolonları kontrol et
+            required_columns = ['SATISTEMSILCISI', 'TOPLAMNETFIYAT']
+            missing_columns = [col for col in required_columns if col not in headers]
+            
+            if missing_columns:
+                print(f"❌ Eksik kolonlar: {missing_columns}")
+                return jsonify({
+                    'error': f'Eksik kolonlar: {", ".join(missing_columns)}. Mevcut kolonlar: {", ".join(headers)}'
+                }), 400
+            
+            # Geçici olarak Excel import devre dışı
             return jsonify({
-                'error': f'Eksik kolonlar: {", ".join(missing_columns)}. Mevcut kolonlar: {", ".join(list(df.columns))}'
-            }), 400
-        
-        # Verileri temizle ve işle
-        df = df.dropna(subset=['SATISTEMSILCISI', 'TOPLAMNETFIYAT'])
-        
-        # Temsilci isimlerini normalize et
-        df['SATISTEMSILCISI'] = df['SATISTEMSILCISI'].str.strip()
-        
-        # Debug: İlk birkaç satırı göster
-        print(f"📋 Excel'den okunan ilk 3 satır:")
-        print(df.head(3).to_dict('records'))
-        
-        # Satış verilerini kaydet
-        print("💾 Satış verileri kaydediliyor...")
-        sales_count = 0
-        created_representatives = []
-        
-        for _, row in df.iterrows():
+                'message': 'Excel import geçici olarak devre dışı. Pandas paketi eklenene kadar bekleyin.',
+                'headers': headers
+            }), 200
+            
+        except Exception as e:
+            print(f"❌ Excel okuma hatası: {e}")
+            return jsonify({'error': f'Excel okuma hatası: {str(e)}'}), 400
             try:
                 # Temsilciyi bul veya oluştur
                 representative_name = row['SATISTEMSILCISI']
