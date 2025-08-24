@@ -8,10 +8,6 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.7
-      - key: SECRET_KEY
-        generateValue: true
-      - key: JWT_SECRET_KEY
-        generateValue: true
     healthCheckPath: /
     autoDeploy: true
 
