@@ -5,4 +5,4 @@ set -o errexit
 pip install -r requirements.txt
 
 # Basit kullanıcı oluşturma scripti çalıştır
-python create_user.py
+python simple_user.py
