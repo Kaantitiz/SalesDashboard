@@ -318,6 +318,7 @@ def delete_user(user_id):
         # Kimlik bilgilerini anonimleştir
         anon_suffix = f"_deleted_{user.id}"
         user.username = (user.username or 'user') + anon_suffix
+        # Email alanı artık nullable, None olarak ayarlayabiliriz
         user.email = None
         user.representative_code = None
         # Oturum ve bağlı kayıtlar kullanıcısız kalabilir, ancak giriş engellenir

@@ -3080,6 +3080,7 @@ def manage_user(user_id):
                 user.username = f"{user.username}_deleted_{user.id}"
             except Exception:
                 pass
+            # Email alanı artık nullable, None olarak ayarlayabiliriz
             user.email = None
             user.representative_code = None
             db.session.commit()
