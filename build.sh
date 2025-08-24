@@ -2,7 +2,14 @@
 # exit on error
 set -o errexit
 
-pip install -r requirements.txt
+echo "🚀 Build başlıyor..."
 
-# Direkt veritabanı oluşturma
-python direct_db.py
+echo "📦 Paketler yükleniyor..."
+pip install -r requirements.txt
+echo "✅ Paketler yüklendi"
+
+echo "🗄️ Veritabanı oluşturuluyor..."
+python simple_db.py
+echo "✅ Veritabanı oluşturuldu"
+
+echo "🎉 Build tamamlandı!"
