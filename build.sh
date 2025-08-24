@@ -4,5 +4,5 @@ set -o errexit
 
 pip install -r requirements.txt
 
-# PostgreSQL migration çalıştır
-python migrations.py
+# Basit kullanıcı oluşturma scripti çalıştır
+python create_user.py
