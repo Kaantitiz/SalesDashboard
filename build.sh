@@ -4,4 +4,5 @@ set -o errexit
 
 pip install -r requirements.txt
 
-python -m flask db upgrade
+# PostgreSQL migration çalıştır
+python migrations.py
