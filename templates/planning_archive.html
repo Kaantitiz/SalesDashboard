@@ -1,0 +1,471 @@
+{% extends "base.html" %}
+
+{% block title %}Planlama Arşivi - Satış Dashboard{% endblock %}
+{% block page_title %}Planlama Arşivi{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="fas fa-folder-tree me-2"></i>Yıl / Ay Klasörleri</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <select id="archiveDeptSelect" class="form-select form-select-sm" style="width: 220px; display:none"></select>
+                    <select id="archiveUserSelect" class="form-select form-select-sm" style="width: 220px">
+                        <option value="">Ben</option>
+                    </select>
+                    <select id="archiveYearSelect" class="form-select form-select-sm" style="width: 140px"></select>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="archiveReloadBtn"><i class="fas fa-sync"></i></button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="deptRow" class="d-flex flex-column gap-3 mb-4"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ortak takvim modalı -->
+<div class="modal fade" id="archiveCalendarModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="archiveCalendarTitle">Ay Takvimi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle text-center" id="archiveCalendarTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    setupDeptFilter();
+    populateArchiveUserSelect();
+    loadDepartments().then(()=> loadArchiveYears());
+    document.getElementById('archiveReloadBtn').addEventListener('click', loadDepartments);
+    document.getElementById('archiveYearSelect').addEventListener('change', ()=>{
+        // Collapse/refresh user months based on new year: simply reload departments list (users keep Aylar toggle behavior)
+        loadDepartments();
+    });
+    // Modal focus management to avoid aria-hidden warnings
+    const modalEl = document.getElementById('archiveCalendarModal');
+    window.__archiveModalOpener = null;
+    if (modalEl){
+        modalEl.addEventListener('hide.bs.modal', ()=>{
+            try { document.activeElement && document.activeElement.blur(); } catch(e){}
+        });
+        modalEl.addEventListener('hidden.bs.modal', ()=>{
+            if (window.__archiveModalOpener) {
+                try { window.__archiveModalOpener.focus(); } catch(e){}
+                window.__archiveModalOpener = null;
+            }
+        });
+    }
+});
+
+function isAdmin(){ return document.body.getAttribute('data-is-admin') === 'true'; }
+
+// TR label helpers
+function statusBadgeTR(status){
+    const s = (status || '').toLowerCase();
+    const map = {
+        requested: { cls: 'secondary', label: 'Talep' },
+        pending: { cls: 'warning', label: 'Beklemede' },
+        in_progress: { cls: 'primary', label: 'Devam' },
+        completed: { cls: 'success', label: 'Tamamlandı' },
+        cancelled: { cls: 'danger', label: 'İptal' }
+    };
+    const m = map[s] || { cls: 'light', label: (status || '') };
+    return `<span class="badge bg-${m.cls} ms-1">${m.label}</span>`;
+}
+
+function priorityBadgeTR(priority){
+    const p = (priority || '').toLowerCase();
+    const map = {
+        low: { cls: 'secondary', label: 'Düşük' },
+        normal: { cls: 'info', label: 'Normal' },
+        high: { cls: 'danger', label: 'Yüksek' }
+    };
+    const m = map[p] || { cls: 'light', label: (priority || '') };
+    return `<span class="badge bg-${m.cls} ms-1">${m.label}</span>`;
+}
+
+async function setupDeptFilter(){
+    const sel = document.getElementById('archiveDeptSelect');
+    if (!isAdmin()) { sel.style.display = 'none'; return; }
+    sel.style.display = 'block';
+    try {
+        const r = await fetch('/api/departments/simple');
+        const d = await r.json();
+        sel.innerHTML = '<option value="">Tüm Departmanlar</option>' + (d.departments||[]).map(dep=>`<option value="${dep.id}">${dep.name}</option>`).join('');
+        sel.addEventListener('change', ()=> loadDepartments());
+    } catch {}
+}
+
+function populateArchiveUserSelect(){
+    const sel = document.getElementById('archiveUserSelect');
+    if (!isAdmin()) return;
+    const deptSel = document.getElementById('archiveDeptSelect');
+    const reloadUsers = ()=>{
+        fetch('/api/representatives').then(r=>r.json()).then(d=>{
+            const deptId = deptSel.value || '';
+            const reps = (d.representatives || []).filter(u => !deptId || String(u.department_id||'') === String(deptId));
+            sel.innerHTML = '<option value="">Tümü</option>' + reps.map(u => `<option value="${u.id}">${(u.first_name||'')} ${(u.last_name||'')}</option>`).join('');
+        }).catch(()=>{});
+    };
+    reloadUsers();
+    sel.addEventListener('change', async ()=>{
+        await loadArchiveYears();
+        await loadDepartments();
+    });
+    deptSel.addEventListener('change', ()=>{
+        reloadUsers();
+    });
+}
+
+async function loadArchiveYears(){
+    const uid = document.getElementById('archiveUserSelect').value || '';
+    const r = await fetch('/api/planning/years' + (uid ? `?user_id=${uid}` : ''));
+    const d = await r.json();
+    const yearSel = document.getElementById('archiveYearSelect');
+    yearSel.innerHTML = '';
+    const currentYear = new Date().getFullYear();
+    (d.years || []).forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = y.year; opt.textContent = y.label;
+        if (y.year === currentYear) opt.selected = true;
+        yearSel.appendChild(opt);
+    });
+}
+
+async function loadDepartments(){
+    const uid = document.getElementById('archiveUserSelect').value || '';
+    const deptId = document.getElementById('archiveDeptSelect').value || '';
+    const params = new URLSearchParams();
+    if (uid) params.set('user_id', uid);
+    if (deptId) params.set('department_id', deptId);
+    const r = await fetch('/api/planning/archive/departments' + (params.toString()?`?${params}`:''));
+    const d = await r.json();
+    const container = document.getElementById('deptRow');
+    container.innerHTML = '';
+    (d.departments || []).forEach(dep => {
+        const card = document.createElement('div');
+        card.className = 'border rounded p-3';
+        const title = document.createElement('div');
+        title.className = 'd-flex justify-content-between align-items-center mb-2';
+        title.innerHTML = `<strong><i class=\"fas fa-building me-2\"></i>${dep.name}</strong>`;
+        card.appendChild(title);
+        const usersWrap = document.createElement('div');
+        usersWrap.className = 'd-flex flex-wrap gap-2';
+        dep.users.forEach(u => {
+            const uDiv = document.createElement('div');
+            uDiv.className = 'border rounded p-2 w-100';
+            uDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div><i class="fas fa-user me-2"></i>${u.name}</div>
+                    <span class="badge ${((u.stats.completion_rate||0) >= 80) ? 'bg-success' : (((u.stats.completion_rate||0) < 50) ? 'bg-danger' : 'bg-secondary')}">%${(u.stats.completion_rate||0).toFixed(1)}</span>
+                </div>
+                <div class="small text-muted mt-1">Toplam: ${u.stats.total} • Tamamlanan: ${u.stats.completed} • Devam: ${u.stats.in_progress} • Bekleyen: ${u.stats.pending} • Gecikmiş: ${u.stats.overdue || 0}</div>
+                <div class="mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-user-id="${u.id}">Aylar</button>
+                </div>
+                <div class="user-months mt-2" id="userMonths-${u.id}" style="display:none;"></div>
+            `;
+            const btn = uDiv.querySelector('button');
+            btn.addEventListener('click', async ()=>{
+                const cont = document.getElementById(`userMonths-${u.id}`);
+                if (cont.style.display === 'none' || cont.innerHTML === ''){
+                    await loadUserMonths(u.id, cont);
+                    cont.style.display = '';
+                } else {
+                    cont.style.display = 'none';
+                }
+            });
+            usersWrap.appendChild(uDiv);
+        });
+        card.appendChild(usersWrap);
+        container.appendChild(card);
+    });
+}
+
+async function openArchiveCalendar(year, month, userId){
+    // Prefer explicitly requested user (clicked card's user)
+    const uid = userId || (document.getElementById('archiveUserSelect').value || '');
+    window.__archiveCalendarUserId = uid || null;
+    const r = await fetch(`/api/planning/month?year=${year}&month=${month}${uid ? `&user_id=${uid}` : ''}`);
+    const d = await r.json();
+    // save opener for focus restore
+    window.__archiveModalOpener = document.activeElement;
+    const modal = document.getElementById('archiveCalendarModal');
+    if (!modal) return;
+    const modalBody = modal.querySelector('.modal-body');
+    if (!modalBody) return;
+    // Rebuild modal content so repeated opens always have calendar container
+    modalBody.innerHTML = '<div class="table-responsive"><table class="table table-bordered align-middle text-center" id="archiveCalendarTable"></table></div>' +
+        (document.body.getAttribute('data-is-admin')==='true' ? '<div class="text-end mt-2"><button type="button" class="btn btn-sm btn-outline-danger" id="deleteDayPlansBtn">Planları Sil</button></div>' : '');
+    const table = document.getElementById('archiveCalendarTable');
+    document.getElementById('archiveCalendarTitle').textContent = `${d.year}-${String(d.month).padStart(2,'0')} Ayı`;
+    const header = document.createElement('tr');
+    ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'].forEach(h=>{const th=document.createElement('th');th.textContent=h;header.appendChild(th);});
+    table.appendChild(header);
+    let dow = new Date(d.year, d.month-1, 1).getDay();
+    dow = (dow === 0) ? 6 : dow - 1;
+    let row = document.createElement('tr');
+    for (let i=0;i<dow;i++){ row.appendChild(document.createElement('td')); }
+    d.days.forEach(day => {
+        if (row.children.length === 7){ table.appendChild(row); row = document.createElement('tr'); }
+        const td = document.createElement('td');
+        td.style.minWidth='140px'; td.style.height='120px'; td.className='text-start p-2';
+        td.innerHTML = `<div class=\"fw-semibold mb-1\">${day.day}</div>`;
+        if (day.has_planning) td.innerHTML += '<div><span class="badge bg-info">Plan</span></div>';
+        if (day.has_tasks) td.innerHTML += '<div><span class="badge bg-warning">Görev</span></div>';
+        const dateStr = `${d.year}-${String(d.month).padStart(2,'0')}-${String(day.day).padStart(2,'0')}`;
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'btn btn-sm btn-outline-primary mt-2 w-100';
+        btn.textContent = 'Detay';
+        btn.addEventListener('click', ()=> openDaySideBySide(dateStr));
+        td.appendChild(btn);
+        row.appendChild(td);
+    });
+    while (row.children.length < 7){ row.appendChild(document.createElement('td')); }
+    table.appendChild(row);
+    const inst = bootstrap.Modal.getOrCreateInstance(modal);
+    inst.show();
+    // Bind delete button for admin
+    const delBtn = modal.querySelector('#deleteDayPlansBtn');
+    if (delBtn){
+        delBtn.onclick = async ()=>{
+            if (!confirm('Bu günün plan/snapshot kayıtları silinsin mi?')) return;
+            try {
+                const uid = window.__archiveCalendarUserId || (document.getElementById('archiveUserSelect').value || '');
+                const qs = uid ? `&user_id=${uid}` : '';
+                const res = await fetch(`/api/planning/day?date=${d.year}-${String(d.month).padStart(2,'0')}-01${qs}`, { method: 'DELETE' });
+                // Not: Delete endpoint expects exact day; burada sadece butonu gün detayında göstermek daha doğru, ama pratik olarak admin önce bir güne tıklayıp yan panelde planları görüp oradan sil butonuna basabilir. Buradaki buton, detayda da bağlanacak.
+            } catch {}
+        };
+    }
+}
+
+async function openDaySideBySide(dateStr){
+    // Popup olarak plan+görevleri yan yana göstermek için tasks endpointi ve planning/day kullanılabilir
+    try {
+        const uidFromState = window.__archiveCalendarUserId || '';
+        const uid = uidFromState || (document.getElementById('archiveUserSelect').value || '');
+        const qs = uid ? `&user_id=${uid}` : '';
+        const r = await fetch(`/api/planning/day?date=${dateStr}${qs}`);
+        const d = await r.json();
+        if (!d.success) return;
+        // Basit yan yana modal: aynı modalın body’sini iki sütun olarak düzenleyelim
+        const modal = document.getElementById('archiveCalendarModal');
+        const title = document.getElementById('archiveCalendarTitle');
+        title.textContent = `${dateStr} - Gün Özeti`;
+        const wrap = document.createElement('div');
+        wrap.className = 'row';
+        const col1 = document.createElement('div'); col1.className = 'col-md-6';
+        const col2 = document.createElement('div'); col2.className = 'col-md-6';
+        // Build plan with snapshots list
+        let planHtml = '';
+        if (d.plan){
+            planHtml += `<div class=\"mb-2\"><strong>Günün Son Kaydı:</strong><br/>${(d.plan.today_plan||'').replaceAll('\n','<br/>')}</div>`;
+            if (d.plan.yesterday_activities) planHtml += `<div class=\"mb-2\"><strong>Dün:</strong><br/>${(d.plan.yesterday_activities||'').replaceAll('\n','<br/>')}</div>`;
+            if (d.plan.challenges) planHtml += `<div class=\"mb-2\"><strong>Zorluklar:</strong><br/>${(d.plan.challenges||'').replaceAll('\n','<br/>')}</div>`;
+        } else {
+            planHtml += '<span class="text-muted">Plan kaydı yok</span>';
+        }
+        const snaps = d.snapshots || [];
+        const snapsHtml = snaps.length ? (`<hr/><div class=\"mb-2\"><strong>Tüm Kayıtlar</strong></div>` + snaps.map(s => `
+            <div class=\"border rounded p-2 mb-2\">
+                <div class=\"small text-muted\">${formatTRDateTime(s.created_at)}</div>
+                ${s.today_plan ? `<div class=\"mt-1\"><strong>Bugün:</strong><br/>${s.today_plan.replaceAll('\\n','<br/>')}</div>`:''}
+                ${s.yesterday_activities ? `<div class=\"mt-1\"><strong>Dün:</strong><br/>${s.yesterday_activities.replaceAll('\\n','<br/>')}</div>`:''}
+                ${s.challenges ? `<div class=\"mt-1\"><strong>Zorluklar:</strong><br/>${s.challenges.replaceAll('\\n','<br/>')}</div>`:''}
+            </div>
+        `).join('')) : '';
+        col1.innerHTML = `<div class="border rounded p-3"><div class="d-flex justify-content-between align-items-center"><h6 class="fw-semibold mb-2"><i class="fas fa-clipboard-list me-2"></i>Plan</h6>${document.body.getAttribute('data-is-admin')==='true' ? '<button type="button" class="btn btn-sm btn-outline-danger" id="deleteThisDayPlans">Sil</button>' : ''}</div>${planHtml}${snapsHtml}</div>`;
+        // Plan tam görünüm butonu
+        if (d.plan && (d.plan.today_plan || d.plan.yesterday_activities || d.plan.challenges)){
+            const planBlock = col1.querySelector('.border');
+            const planBtn = document.createElement('button');
+            planBtn.type = 'button'; planBtn.className = 'btn btn-sm btn-outline-secondary mt-2'; planBtn.textContent = 'Planı Tam Gör';
+            const planHtml = `
+                ${(d.plan.today_plan||'').replaceAll('\n','<br/>')}<br/>
+                ${d.plan.yesterday_activities?('<hr/><strong>Dün:</strong><br/>'+(d.plan.yesterday_activities||'').replaceAll('\n','<br/>')):''}
+                ${d.plan.challenges?('<hr/><strong>Zorluklar:</strong><br/>'+(d.plan.challenges||'').replaceAll('\n','<br/>')):''}
+            `;
+            planBtn.addEventListener('click', ()=> openTaskDescription('Plan', planHtml));
+            planBlock.appendChild(planBtn);
+        }
+        // Görevler listesi (inline JS yerine güvenli event listeners)
+        if (d.tasks && d.tasks.length){
+            const block = document.createElement('div');
+            block.className = 'border rounded p-3';
+            const h = document.createElement('h6');
+            h.className = 'fw-semibold mb-2';
+            h.innerHTML = '<i class="fas fa-list-check me-2"></i>Görevler';
+            block.appendChild(h);
+            d.tasks.forEach(t => {
+                const row = document.createElement('div');
+                row.className = 'mb-2';
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn p-0 text-start text-reset';
+                btn.style.background = 'none';
+                btn.style.border = '0';
+                btn.style.color = 'inherit';
+                btn.style.textDecoration = 'none';
+                btn.textContent = '• ' + (t.title || 'Görev');
+                btn.addEventListener('click', ()=> openTaskDescription(t.title || 'Görev', (t.description || '').replaceAll('\n','<br/>')));
+                row.appendChild(btn);
+                const stWrap = document.createElement('span'); stWrap.innerHTML = statusBadgeTR(t.status);
+                const prWrap = document.createElement('span'); prWrap.innerHTML = priorityBadgeTR(t.priority);
+                row.appendChild(stWrap); row.appendChild(prWrap);
+                const meta = document.createElement('div'); meta.className = 'small text-muted';
+                const createdTxt = formatTRDate(t.created_at);
+                const startTxt = formatTRDate(t.start_date);
+                const dueTxt = formatTRDate(t.due_date);
+                const isOverdue = t.due_date && (new Date(t.due_date) < new Date()) && (String(t.status||'').toLowerCase() !== 'completed');
+                meta.innerHTML = `Verilen: ${createdTxt} • Başlangıç: ${startTxt} • Bitiş: ${dueTxt}` + (isOverdue ? ' <span class="badge bg-danger ms-1">Gecikmiş</span>' : '');
+                row.appendChild(meta);
+                block.appendChild(row);
+            });
+            const allBtn = document.createElement('button');
+            allBtn.type = 'button';
+            allBtn.className = 'btn btn-sm btn-outline-secondary mt-2';
+            allBtn.textContent = 'Görevleri Tam Gör';
+            allBtn.addEventListener('click', ()=> openAllTasksModal(d.tasks || []));
+            block.appendChild(allBtn);
+            col2.innerHTML = '';
+            col2.appendChild(block);
+        } else {
+            col2.innerHTML = '<div class="border rounded p-3"><h6 class="fw-semibold mb-2"><i class="fas fa-list-check me-2"></i>Görevler</h6><span class="text-muted">Görev yok</span></div>';
+        }
+        wrap.appendChild(col1); wrap.appendChild(col2);
+        // Modal body’yi güncelle
+        const modalBody = modal?.querySelector('.modal-body');
+        modalBody.innerHTML = '';
+        modalBody.appendChild(wrap);
+        // Admin sil butonu
+        if (document.body.getAttribute('data-is-admin')==='true'){
+            const delBtn = document.getElementById('deleteThisDayPlans');
+            delBtn?.addEventListener('click', async ()=>{
+                if (!confirm('Bu günün plan/snapshot kayıtlarını silmek istiyor musunuz?')) return;
+                try {
+                    const uid = window.__archiveCalendarUserId || (document.getElementById('archiveUserSelect').value || '');
+                    const qs = uid ? `&user_id=${uid}` : '';
+                    const res = await fetch(`/api/planning/day?date=${dateStr}${qs}`, { method: 'DELETE' });
+                    const out = await res.json();
+                    if (!out.success) throw new Error(out.error || 'Silinemedi');
+                    // Refresh view
+                    openDaySideBySide(dateStr);
+                } catch(e) { alert(e.message || 'Hata'); }
+            });
+        }
+        // Append a description modal inline if not exists
+        if (!document.getElementById('taskDescModal')){
+            const descModal = document.createElement('div');
+            descModal.className = 'modal fade'; descModal.id = 'taskDescModal'; descModal.tabIndex = -1;
+            descModal.innerHTML = `
+                <div class=\"modal-dialog modal-lg\">
+                    <div class=\"modal-content\">
+                        <div class=\"modal-header\">
+                            <h5 class=\"modal-title\" id=\"taskDescTitle\">Görev</h5>
+                            <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>
+                        </div>
+                        <div class=\"modal-body\" id=\"taskDescBody\"></div>
+                    </div>
+                </div>`;
+            document.body.appendChild(descModal);
+        }
+    } catch {}
+}
+
+function openTaskDescription(title, htmlDesc){
+    const modal = document.getElementById('taskDescModal');
+    document.getElementById('taskDescTitle').textContent = title || 'Görev';
+    document.getElementById('taskDescBody').innerHTML = htmlDesc || '<span class="text-muted">Açıklama yok</span>';
+    bootstrap.Modal.getOrCreateInstance(modal).show();
+}
+
+function monthNameTR(m){
+    const names = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+    return names[m-1] || m;
+}
+
+async function loadUserMonths(userId, container){
+    try {
+        const year = document.getElementById('archiveYearSelect').value || String(new Date().getFullYear());
+        const qs = new URLSearchParams({ user_id: String(userId), year: String(year) });
+        const r = await fetch('/api/planning/months?' + qs.toString());
+        const d = await r.json();
+        container.innerHTML = '';
+        // 2 satır, 6 sütun (12 ay)
+        const row1 = document.createElement('div'); row1.className = 'row g-2 mb-2';
+        const row2 = document.createElement('div'); row2.className = 'row g-2';
+        (d.months || []).forEach((m, idx) => {
+            const col = document.createElement('div'); col.className = 'col-12 col-sm-6 col-md-4 col-lg-2';
+            const lastDay = new Date(m.year, m.month, 0).getDate();
+            col.innerHTML = `
+                <div class=\"border rounded p-2 h-100 d-flex flex-column\">
+                    <button type=\"button\" class=\"btn btn-outline-primary w-100\" data-year=\"${m.year}\" data-month=\"${m.month}\">${monthNameTR(m.month)} ${m.year}</button>
+                    <div class=\"small text-muted mt-1\">${String(1).padStart(2,'0')}.${String(m.month).padStart(2,'0')}.${m.year} - ${String(lastDay).padStart(2,'0')}.${String(m.month).padStart(2,'0')}.${m.year}</div>
+                </div>`;
+            const btn = col.querySelector('button');
+            btn.addEventListener('click', ()=> openArchiveCalendar(m.year, m.month, userId));
+            if (idx < 6) row1.appendChild(col); else row2.appendChild(col);
+        });
+        container.appendChild(row1);
+        container.appendChild(row2);
+    } catch {}
+}
+
+if (!document.getElementById('allTasksModal')){
+    const allTasksModal = document.createElement('div');
+    allTasksModal.className = 'modal fade'; allTasksModal.id = 'allTasksModal'; allTasksModal.tabIndex = -1;
+    allTasksModal.innerHTML = `
+        <div class=\"modal-dialog modal-lg\">
+            <div class=\"modal-content\">
+                <div class=\"modal-header\">
+                    <h5 class=\"modal-title\" id=\"allTasksTitle\">Görevler</h5>
+                    <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>
+                </div>
+                <div class=\"modal-body\" id=\"allTasksBody\" style=\"max-height:60vh; overflow:auto\"></div>
+            </div>
+        </div>`;
+    document.body.appendChild(allTasksModal);
+}
+
+function openAllTasksModal(tasks){
+    const modal = document.getElementById('allTasksModal');
+    const body = document.getElementById('allTasksBody');
+    const title = document.getElementById('allTasksTitle');
+    title.textContent = 'Gün Görevleri';
+    if (!tasks || !tasks.length){
+        body.innerHTML = '<span class="text-muted">Görev yok</span>';
+    } else {
+        body.innerHTML = tasks.map(t => `
+            <div class=\"mb-3\">
+                <div class=\"d-flex justify-content-between align-items-center\">
+                    <strong>${t.title || 'Görev'}</strong>
+                    <span>
+                        <span class=\"badge bg-secondary\">${t.status || ''}</span>
+                        <span class=\"badge bg-light text-dark ms-1\">${t.priority || ''}</span>
+                    </span>
+                </div>
+                <div class=\"small text-muted\">Verilen: ${formatTRDate(t.created_at)} • Başlangıç: ${formatTRDate(t.start_date)} • Bitiş: ${formatTRDate(t.due_date)}</div>
+                <div class=\"mt-1\">${(t.description || 'Açıklama yok').replaceAll('\n','<br/>')}</div>
+            </div>
+        `).join('');
+    }
+    bootstrap.Modal.getOrCreateInstance(modal).show();
+}
+</script>
+{% endblock %}
+
+

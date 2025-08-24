@@ -1,0 +1,624 @@
+{% extends "base.html" %}
+
+{% block title %}Departman Yönetimi{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Departman Yönetimi</h1>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
+                    <i class="fas fa-plus"></i> Yeni Departman
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Departmanlar</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="departmentsTable">
+                            <thead>
+                                <tr>
+                                                                    <th>ID</th>
+                                <th>Departman Adı</th>
+                                <th>Unvan</th>
+                                <th>Açıklama</th>
+                                <th>Yönetici</th>
+                                <th>Kullanıcı Sayısı</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- JavaScript ile doldurulacak -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Departman Modal -->
+<div class="modal fade" id="addDepartmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Departman Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addDepartmentForm">
+                    <div class="mb-3">
+                        <label for="deptName" class="form-label">Departman Adı</label>
+                        <input type="text" class="form-control" id="deptName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="deptDescription" class="form-label">Açıklama</label>
+                        <textarea class="form-control" id="deptDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="deptDefaultRoleTitle" class="form-label">Unvan</label>
+                        <input type="text" class="form-control" id="deptDefaultRoleTitle" placeholder="Örn: Temsilci">
+                    </div>
+                    <div class="mb-3">
+                        <label for="deptManager" class="form-label">Yönetici</label>
+                        <select class="form-select" id="deptManager">
+                            <option value="">Yönetici Seçin</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="createDepartment()">Oluştur</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Departman Düzenle Modal -->
+<div class="modal fade" id="editDepartmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Departman Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editDepartmentForm">
+                    <input type="hidden" id="editDeptId">
+                    <div class="mb-3">
+                        <label for="editDeptName" class="form-label">Departman Adı</label>
+                        <input type="text" class="form-control" id="editDeptName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDeptDescription" class="form-label">Açıklama</label>
+                        <textarea class="form-control" id="editDeptDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDeptDefaultRoleTitle" class="form-label">Unvan</label>
+                        <input type="text" class="form-control" id="editDeptDefaultRoleTitle" placeholder="Örn: Temsilci">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDeptManager" class="form-label">Yönetici</label>
+                        <select class="form-select" id="editDeptManager">
+                            <option value="">Yönetici Seçin</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editDeptActive" checked>
+                            <label class="form-check-label" for="editDeptActive">
+                                Aktif
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="updateDepartment()">Güncelle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- İzinler Modal -->
+<div class="modal fade" id="permissionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Departman İzinleri</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Modül</th>
+                                        <th>Görüntüleme</th>
+                                        <th>Düzenleme</th>
+                                        <th>Silme</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="permissionsTableBody">
+                                    <!-- JavaScript ile doldurulacak -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="savePermissions()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kullanıcılar Modal -->
+<div class="modal fade" id="usersModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Departman Kullanıcıları</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <select class="form-select" id="addUserSelect">
+                            <option value="">Kullanıcı Seçin</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <button class="btn btn-success" onclick="addUserToDepartment()">
+                            <i class="fas fa-plus"></i> Kullanıcı Ekle
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Kullanıcı Adı</th>
+                                <th>Ad Soyad</th>
+                                <th>Email</th>
+                                <th>Rol</th>
+                                <th>Durum</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="departmentUsersTableBody">
+                            <!-- JavaScript ile doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentDepartmentId = null;
+let allUsers = [];
+
+// Sayfa yüklendiğinde
+document.addEventListener('DOMContentLoaded', function() {
+    loadDepartments();
+    loadUsers();
+});
+
+async function loadDepartments(){
+    try {
+        const res = await fetch('/auth/departments');
+        const data = await res.json();
+        const tbody = document.querySelector('#departmentsTable tbody');
+        tbody.innerHTML = '';
+        (data.departments || []).forEach(d => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${d.id}</td>
+                <td>${d.name}</td>
+                <td>${d.default_role_title || '-'}</td>
+                <td>${d.description || '-'}</td>
+                <td>${d.manager_name ? (d.manager_name + (d.manager_id ? ' [DM]' : '')) : '-'}</td>
+                <td>${d.user_count ?? '-'}</td>
+                <td>${d.is_active ? '<span class="badge bg-success">Aktif</span>' : '<span class="badge bg-secondary">Pasif</span>'}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="editDepartment(${d.id})">Düzenle</button>
+                    <button class="btn btn-sm btn-outline-secondary ms-1" onclick="showPermissions(${d.id})">İzinler</button>
+                    <button class="btn btn-sm btn-outline-dark ms-1" onclick="showUsers(${d.id})">Kullanıcılar</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (e) {
+        showAlert('Departmanlar yüklenirken hata oluştu', 'danger');
+    }
+}
+
+// Kullanıcıları yükle
+async function loadUsers() {
+    try {
+        const response = await fetch('/auth/users');
+        const data = await response.json();
+        allUsers = data.users;
+        
+        // Select elementlerini doldur
+        const managerSelects = ['deptManager', 'editDeptManager', 'addUserSelect'];
+        managerSelects.forEach(selectId => {
+            const select = document.getElementById(selectId);
+            if (select) {
+                select.innerHTML = '<option value="">Seçin</option>';
+                data.users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.full_name} (${user.username})`;
+                    if (user.role === 'department_manager') {
+                        option.textContent += ' [DM]';
+                    } else if (user.role === 'admin') {
+                        option.textContent += ' [Admin]';
+                    }
+                    select.appendChild(option);
+                });
+            }
+        });
+    } catch (error) {
+        console.error('Kullanıcılar yüklenirken hata:', error);
+    }
+}
+
+// Yeni departman oluştur
+async function createDepartment() {
+    const name = document.getElementById('deptName').value;
+    const description = document.getElementById('deptDescription').value;
+    const managerId = document.getElementById('deptManager').value;
+    
+    if (!name) {
+        showAlert('Departman adı gerekli', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/auth/departments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                description: description,
+                default_role_title: document.getElementById('deptDefaultRoleTitle').value || null,
+                manager_id: managerId || null
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showAlert('Departman başarıyla oluşturuldu', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('addDepartmentModal')).hide();
+            document.getElementById('addDepartmentForm').reset();
+            loadDepartments();
+        } else {
+            showAlert(data.error || 'Departman oluşturulurken hata oluştu', 'danger');
+        }
+    } catch (error) {
+        console.error('Departman oluşturulurken hata:', error);
+        showAlert('Departman oluşturulurken hata oluştu', 'danger');
+    }
+}
+
+// Departman düzenle
+async function editDepartment(deptId) {
+    try {
+        const response = await fetch(`/auth/departments/${deptId}`);
+        const data = await response.json();
+        
+        document.getElementById('editDeptId').value = deptId;
+        document.getElementById('editDeptName').value = data.department.name;
+        document.getElementById('editDeptDescription').value = data.department.description || '';
+        document.getElementById('editDeptDefaultRoleTitle').value = data.department.default_role_title || '';
+        document.getElementById('editDeptManager').value = data.department.manager_id || '';
+        document.getElementById('editDeptActive').checked = data.department.is_active;
+        
+        new bootstrap.Modal(document.getElementById('editDepartmentModal')).show();
+    } catch (error) {
+        console.error('Departman bilgileri yüklenirken hata:', error);
+        showAlert('Departman bilgileri yüklenirken hata oluştu', 'danger');
+    }
+}
+
+// Departman güncelle
+async function updateDepartment() {
+    const deptId = document.getElementById('editDeptId').value;
+    const name = document.getElementById('editDeptName').value;
+    const description = document.getElementById('editDeptDescription').value;
+    const managerId = document.getElementById('editDeptManager').value;
+    const isActive = document.getElementById('editDeptActive').checked;
+    
+    if (!name) {
+        showAlert('Departman adı gerekli', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/auth/departments/${deptId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                description: description,
+                default_role_title: document.getElementById('editDeptDefaultRoleTitle').value || null,
+                manager_id: managerId || null,
+                is_active: isActive
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showAlert('Departman başarıyla güncellendi', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editDepartmentModal')).hide();
+            loadDepartments();
+        } else {
+            showAlert(data.error || 'Departman güncellenirken hata oluştu', 'danger');
+        }
+    } catch (error) {
+        console.error('Departman güncellenirken hata:', error);
+        showAlert('Departman güncellenirken hata oluştu', 'danger');
+    }
+}
+
+// İzinleri göster
+async function showPermissions(deptId) {
+    currentDepartmentId = deptId;
+    
+    try {
+        const response = await fetch(`/auth/departments/${deptId}/permissions`);
+        const data = await response.json();
+        
+        const tbody = document.getElementById('permissionsTableBody');
+        tbody.innerHTML = '';
+        
+        const modules = [
+            { name: 'sales', title: 'Satış' },
+            { name: 'tasks', title: 'Görevler' },
+            { name: 'reports', title: 'Raporlar' },
+            { name: 'planning', title: 'Planlama Arşivi' },
+            { name: 'panel_sales', title: 'Satış Paneli' },
+            { name: 'panel_purchasing', title: 'Satın Alma Paneli' },
+            { name: 'user_management', title: 'Kullanıcı Yönetimi' },
+            { name: 'department_management', title: 'Departman Yönetimi' }
+        ];
+        
+        modules.forEach(module => {
+            const permission = data.permissions.find(p => p.module_name === module.name) || {
+                can_view: false,
+                can_edit: false,
+                can_delete: false
+            };
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${module.title}</td>
+                <td>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" 
+                               ${permission.can_view ? 'checked' : ''} 
+                               onchange="updatePermissionCheckbox('${module.name}', 'view', this.checked)">
+                    </div>
+                </td>
+                <td>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" 
+                               ${permission.can_edit ? 'checked' : ''} 
+                               onchange="updatePermissionCheckbox('${module.name}', 'edit', this.checked)">
+                    </div>
+                </td>
+                <td>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" 
+                               ${permission.can_delete ? 'checked' : ''} 
+                               onchange="updatePermissionCheckbox('${module.name}', 'delete', this.checked)">
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        new bootstrap.Modal(document.getElementById('permissionsModal')).show();
+    } catch (error) {
+        console.error('İzinler yüklenirken hata:', error);
+        showAlert('İzinler yüklenirken hata oluştu', 'danger');
+    }
+}
+
+// İzin checkbox'larını güncelle
+function updatePermissionCheckbox(moduleName, permissionType, value) {
+    // Bu fonksiyon checkbox değişikliklerini takip eder
+    // Gerçek kaydetme işlemi savePermissions() fonksiyonunda yapılır
+}
+
+// İzinleri kaydet
+async function savePermissions() {
+    const tbody = document.getElementById('permissionsTableBody');
+    const permissions = [];
+    
+    tbody.querySelectorAll('tr').forEach(row => {
+        const moduleName = row.querySelector('input[type="checkbox"]').getAttribute('onchange').split("'")[1];
+        const checkboxes = row.querySelectorAll('input[type="checkbox"]');
+        
+        permissions.push({
+            module_name: moduleName,
+            can_view: checkboxes[0].checked,
+            can_edit: checkboxes[1].checked,
+            can_delete: checkboxes[2].checked
+        });
+    });
+    
+    try {
+        const response = await fetch(`/auth/departments/${currentDepartmentId}/permissions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ permissions: permissions })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showAlert('İzinler başarıyla kaydedildi', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('permissionsModal')).hide();
+        } else {
+            showAlert(data.error || 'İzinler kaydedilirken hata oluştu', 'danger');
+        }
+    } catch (error) {
+        console.error('İzinler kaydedilirken hata:', error);
+        showAlert('İzinler kaydedilirken hata oluştu', 'danger');
+    }
+}
+
+// Kullanıcıları göster
+async function showUsers(deptId) {
+    currentDepartmentId = deptId;
+    
+    try {
+        const response = await fetch(`/auth/departments/${deptId}/users`);
+        const data = await response.json();
+        
+        const tbody = document.getElementById('departmentUsersTableBody');
+        tbody.innerHTML = '';
+        
+        data.users.forEach(user => {
+            const row = document.createElement('tr');
+            // Email alanı domain normalize
+            const email = (user.email || '').includes('@') ? user.email.replace(/@.+$/, '@teknikdizel.com') : '';
+            row.innerHTML = `
+                <td>${user.username}</td>
+                <td>${user.full_name}</td>
+                <td class="text-muted small">${email}</td>
+                <td>
+                    <span class="badge bg-info">${(user.role||'').toLowerCase()==='admin'?'Yönetici':((user.role||'').toLowerCase()==='department_manager'?'Departman Yöneticisi':((user.role||'').toLowerCase()==='representative'?'Temsilci':'Kullanıcı'))}</span>
+                </td>
+                <td>
+                    <span class="badge ${user.is_active ? 'bg-success' : 'bg-danger'}">
+                        ${user.is_active ? 'Aktif' : 'Pasif'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeUserFromDepartment(${user.id})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        new bootstrap.Modal(document.getElementById('usersModal')).show();
+    } catch (error) {
+        console.error('Kullanıcılar yüklenirken hata:', error);
+        showAlert('Kullanıcılar yüklenirken hata oluştu', 'danger');
+    }
+}
+
+// Kullanıcıyı departmana ekle
+async function addUserToDepartment() {
+    const userId = document.getElementById('addUserSelect').value;
+    
+    if (!userId) {
+        showAlert('Lütfen bir kullanıcı seçin', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/auth/departments/${currentDepartmentId}/users`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: parseInt(userId) })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showAlert('Kullanıcı departmana eklendi', 'success');
+            document.getElementById('addUserSelect').value = '';
+            showUsers(currentDepartmentId);
+            loadDepartments(); // Departman listesini güncelle
+        } else {
+            showAlert(data.error || 'Kullanıcı eklenirken hata oluştu', 'danger');
+        }
+    } catch (error) {
+        console.error('Kullanıcı eklenirken hata:', error);
+        showAlert('Kullanıcı eklenirken hata oluştu', 'danger');
+    }
+}
+
+// Kullanıcıyı departmandan çıkar
+async function removeUserFromDepartment(userId) {
+    if (!confirm('Bu kullanıcıyı departmandan çıkarmak istediğinizden emin misiniz?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/auth/departments/${currentDepartmentId}/users/${userId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showAlert('Kullanıcı departmandan çıkarıldı', 'success');
+            showUsers(currentDepartmentId);
+            loadDepartments(); // Departman listesini güncelle
+        } else {
+            showAlert(data.error || 'Kullanıcı çıkarılırken hata oluştu', 'danger');
+        }
+    } catch (error) {
+        console.error('Kullanıcı çıkarılırken hata:', error);
+        showAlert('Kullanıcı çıkarılırken hata oluştu', 'danger');
+    }
+}
+
+// Alert göster
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.row'));
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}
+

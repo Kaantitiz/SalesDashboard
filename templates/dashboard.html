@@ -1,0 +1,982 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Satış Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Welcome Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-chart-line fa-4x text-primary mb-3"></i>
+                    <h2 class="fw-bold text-primary">Hoş Geldiniz!</h2>
+                    <p class="text-muted fs-5">{{ current_user.first_name }} {{ current_user.last_name }}, satış performansınızı takip edin.</p>
+                </div>
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="d-flex justify-content-center gap-3">
+                            <div class="text-center">
+                                <div class="h4 text-success mb-1" id="total-sales">₺0</div>
+                                <small class="text-muted">Toplam Satış</small>
+                            </div>
+                            <div class="text-center">
+                                <div class="h4 text-danger mb-1" id="total-returns">₺0</div>
+                                <small class="text-muted">Toplam İade</small>
+                            </div>
+                            <div class="text-center">
+                                <div class="h4 text-primary mb-1" id="net-sales">₺0</div>
+                                <small class="text-muted">Net Satış</small>
+                            </div>
+                            <div class="text-center">
+                                <div class="h4 text-warning mb-1" id="target-completion">0%</div>
+                                <small class="text-muted">Hedef Tamamlama</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Planning Calendar (This Month) -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    Planlama Takvimi (Bu Ay)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle text-center" id="homeCalendarTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<!-- Quick Stats Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-chart-line fa-3x text-success"></i>
+                </div>
+                <h5 class="card-title text-success mb-2">Toplam Satış</h5>
+                <h3 class="fw-bold text-success" id="total-sales-card">₺0</h3>
+                <small class="text-muted">Bu ay</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-undo fa-3x text-danger"></i>
+                </div>
+                <h5 class="card-title text-danger mb-2">Toplam İade</h5>
+                <h3 class="fw-bold text-danger" id="total-returns-card">₺0</h3>
+                <small class="text-muted">Bu ay</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-wallet fa-3x text-primary"></i>
+                </div>
+                <h5 class="card-title text-primary mb-2">Net Satış</h5>
+                <h3 class="fw-bold text-primary" id="net-sales-card">₺0</h3>
+                <small class="text-muted">Bu ay</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-bullseye fa-3x text-warning"></i>
+                </div>
+                <h5 class="card-title text-warning mb-2">Hedef Tamamlama</h5>
+                <h3 class="fw-bold text-warning" id="target-completion-card">0%</h3>
+                <small class="text-muted">Bu ay</small>
+                <div class="mt-2">
+                    <small class="text-muted" id="target-details">Hedef: ₺0</small>
+                </div>
+                <div class="mt-2">
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-warning" id="target-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row mb-4">
+    <div class="col-lg-8 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-table me-2"></i>
+                    Marka ve Ürün Grubu Satışları
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover">
+                        <thead class="table-light sticky-top bg-light">
+                            <tr>
+                                <th>Marka</th>
+                                <th>Ürün Grubu</th>
+                                <th class="text-end">Toplam Satış</th>
+                                <th class="text-end">Yüzde</th>
+                            </tr>
+                        </thead>
+                        <tbody id="brand-product-table">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Veri yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Marka ve Ürün Grubu Dağılımı
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height: 300px;">
+                    <canvas id="brandProductChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Representative Performance (Admin Only) -->
+{% if current_user.is_admin() %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-users me-2"></i>
+                    Temsilci Performansı
+                </h5>
+                <button class="btn btn-primary btn-sm" onclick="refreshRepresentatives()">
+                    <i class="fas fa-sync-alt me-1"></i>Yenile
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="rep-table">
+                        <thead>
+                            <tr>
+                                <th>Temsilci</th>
+                                <th>Toplam Satış</th>
+                                <th>Toplam İade</th>
+                                <th>Net Satış</th>
+                                <th>Hedef Tamamlama</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rep-table-body">
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Yükleniyor...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Activities -->
+<div class="row">
+    <div class="col-lg-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-clock me-2"></i>
+                    Son Satışlar
+                </h5>
+                <a href="#" class="btn btn-outline-primary btn-sm">Tümünü Gör</a>
+            </div>
+            <div class="card-body">
+                <div id="recent-sales" style="max-height: 400px; overflow-y: auto;">
+                    <div class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                        <p class="text-muted mt-2">Yükleniyor...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Son İadeler
+                </h5>
+                <a href="#" class="btn btn-outline-danger btn-sm">Tümünü Gör</a>
+            </div>
+            <div class="card-body">
+                <div id="recent-returns" style="max-height: 400px; overflow-y: auto;">
+                    <div class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                        <p class="text-muted mt-2">Yükleniyor...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+/* Kaydırma çubuğu stilleri */
+#recent-sales::-webkit-scrollbar,
+#recent-returns::-webkit-scrollbar {
+    width: 6px;
+}
+
+#recent-sales::-webkit-scrollbar-track,
+#recent-returns::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#recent-sales::-webkit-scrollbar-thumb,
+#recent-returns::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#recent-sales::-webkit-scrollbar-thumb:hover,
+#recent-returns::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Tablo kaydırma stilleri */
+.table-responsive::-webkit-scrollbar {
+    width: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Sticky header için */
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+}
+
+/* Satış ve iade kartları için border */
+.border-bottom {
+    border-bottom: 1px solid #e9ecef !important;
+}
+
+.border-bottom:last-child {
+    border-bottom: none !important;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Global variables
+let salesChart, brandProductChart;
+let currentPeriod = 'month';
+
+// Initialize dashboard
+$(document).ready(function() {
+    loadDashboardData();
+    initializeCharts();
+    buildHomeCalendar();
+    
+    // Auto refresh every 5 minutes
+    setInterval(loadDashboardData, 300000);
+    
+    // Period selector
+    $('.btn-group .btn').on('click', function() {
+        $('.btn-group .btn').removeClass('active');
+        $(this).addClass('active');
+        currentPeriod = $(this).data('period');
+        loadDashboardData();
+    });
+});
+
+// Load dashboard data
+function loadDashboardData() {
+    // Load summary data
+    $.ajax({
+        url: '/api/reports/summary',
+        method: 'GET',
+        data: { period: currentPeriod },
+        success: function(data) {
+            updateMetrics(data);
+        },
+        error: function(xhr) {
+            console.error('Özet veri yükleme hatası:', xhr);
+            showError('Özet veriler yüklenirken hata oluştu.');
+        }
+    });
+    
+    // Load charts data
+    $.ajax({
+        url: '/api/sales/charts-data',
+        method: 'GET',
+        success: function(data) {
+            if (data.success) {
+                updateCharts(data);
+            }
+        },
+        error: function(xhr) {
+            console.error('Grafik veri yükleme hatası:', xhr);
+            showError('Grafik veriler yüklenirken hata oluştu.');
+        }
+    });
+    
+    // Load representatives performance data
+    loadRepresentativesPerformance();
+}
+
+// Build current month planning calendar (compact) on dashboard
+function buildHomeCalendar(){
+    try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        $.ajax({
+            url: `/api/planning/month?year=${year}&month=${month}`,
+            method: 'GET',
+            success: function(d){
+                const table = document.getElementById('homeCalendarTable');
+                if (!table) return;
+                table.innerHTML = '';
+                const header = document.createElement('tr');
+                ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'].forEach(h=>{const th=document.createElement('th');th.textContent=h;header.appendChild(th);});
+                table.appendChild(header);
+                let dow = new Date(d.year, d.month-1, 1).getDay();
+                dow = (dow === 0) ? 6 : dow - 1;
+                let row = document.createElement('tr');
+                for (let i=0;i<dow;i++){ row.appendChild(document.createElement('td')); }
+                d.days.forEach(day => {
+                    if (row.children.length === 7){ table.appendChild(row); row = document.createElement('tr'); }
+                    const td = document.createElement('td');
+                    td.style.minWidth='110px'; td.style.height='85px'; td.className='text-start';
+                    td.innerHTML = `<div class=\"fw-semibold\">${day.day}</div>`;
+                    if (day.has_planning) td.innerHTML += '<div><span class="badge bg-info">Plan</span></div>';
+                    if (day.has_tasks) {
+                        td.innerHTML += '<div><span class="badge bg-warning">Görev</span></div>';
+                        // Admin/DY için kim kime bilgisini küçük yazı ile göster
+                        try {
+                            const isAdmin = document.body.getAttribute('data-is-admin') === 'true';
+                            const isDM = document.body.getAttribute('data-is-dm') === 'true';
+                            if ((isAdmin || isDM) && Array.isArray(day.tasks_meta) && day.tasks_meta.length){
+                                const lines = day.tasks_meta.map(m => `${m.assigned_by_name} → ${m.assigned_to_name}`);
+                                let extra = '';
+                                if (typeof day.tasks_meta_more === 'number' && day.tasks_meta_more > 0){ extra = ` +${day.tasks_meta_more}`; }
+                                td.innerHTML += `<div class=\"small text-muted\">${lines.join('<br/>')}${extra}</div>`;
+                            }
+                        } catch {}
+                    }
+                    // Atama/Bitiş göstergeleri
+                    if (day.has_task_assign) td.innerHTML += '<div><span class="badge bg-primary">Atama</span></div>';
+                    if (day.has_task_due) td.innerHTML += '<div><span class="badge bg-danger">Bitiş</span></div>';
+                    const dateStr = `${d.year}-${String(d.month).padStart(2,'0')}-${String(day.day).padStart(2,'0')}`;
+                    td.style.cursor = 'pointer';
+                    td.addEventListener('click', ()=> openDayDetailPopup(dateStr));
+                    row.appendChild(td);
+                });
+                while (row.children.length < 7){ row.appendChild(document.createElement('td')); }
+                table.appendChild(row);
+            }
+        });
+    } catch {}
+}
+
+function ensureDayDetailModal(){
+    if (document.getElementById('dayDetailModal')) return;
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'dayDetailModal';
+    modal.tabIndex = -1;
+    modal.innerHTML = `
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dayDetailTitle">Gün Detayı</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="dayDetailBody">
+                    <div class="text-center text-muted py-3">Yükleniyor...</div>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+}
+
+async function openDayDetailPopup(dateStr){
+    try {
+        ensureDayDetailModal();
+        const modalEl = document.getElementById('dayDetailModal');
+        const titleEl = document.getElementById('dayDetailTitle');
+        const bodyEl = document.getElementById('dayDetailBody');
+        if (titleEl) titleEl.textContent = `${dateStr} - Gün Detayı`;
+        if (bodyEl) bodyEl.innerHTML = '<div class="text-center text-muted py-3">Yükleniyor...</div>';
+        const r = await fetch(`/api/planning/day?date=${dateStr}`);
+        const d = await r.json();
+        let planHtml = '';
+        if (d.plan){
+            planHtml += `<div class=\"mb-2\"><strong>Plan:</strong><br/>${(d.plan.today_plan||'').replaceAll('\\n','<br/>')}</div>`;
+            if (d.plan.yesterday_activities) planHtml += `<div class=\"mb-2\"><strong>Dün:</strong><br/>${(d.plan.yesterday_activities||'').replaceAll('\\n','<br/>')}</div>`;
+            if (d.plan.challenges) planHtml += `<div class=\"mb-2\"><strong>Zorluklar:</strong><br/>${(d.plan.challenges||'').replaceAll('\\n','<br/>')}</div>`;
+        } else {
+            planHtml = '<span class="text-muted">Plan kaydı yok</span>';
+        }
+        let tasksHtml = '';
+        const tasks = d.tasks || [];
+        if (tasks.length){
+            tasksHtml = tasks.map(t => {
+                const st = (t.status||'').toLowerCase();
+                const pr = (t.priority||'').toLowerCase();
+                const sBadge = st==='completed'?'success':(st==='in_progress'?'primary':(st==='pending'?'warning':(st==='cancelled'?'danger':'secondary')));
+                const pBadge = pr==='high'?'danger':(pr==='low'?'secondary':'info');
+                const statusTR = { requested:'Talep', pending:'Beklemede', in_progress:'Devam', completed:'Tamamlandı', cancelled:'İptal' };
+                const priorityTR = { high:'Yüksek', normal:'Normal', low:'Düşük' };
+                const sLabel = statusTR[st] || (t.status || '');
+                const pLabel = priorityTR[pr] || (t.priority || '');
+                const start = t.start_date ? formatTRDate(t.start_date) : '-';
+                const due = t.due_date ? formatTRDate(t.due_date) : '-';
+                const canDelete = document.body.getAttribute('data-is-admin') === 'true';
+                const delBtn = canDelete ? ` <button type=\"button\" class=\"btn btn-sm btn-outline-danger ms-2\" onclick=\"deleteTaskInline(${t.id}, '${dateStr}')\"><i class=\\"fas fa-trash\\"></i> Sil</button>` : '';
+                return `<div class=\"mb-2\">• ${t.title || 'Görev'} <span class=\"badge bg-${sBadge} ms-1\">${sLabel}</span> <span class=\"badge bg-${pBadge} ms-1\">${pLabel}</span>${delBtn}<div class=\"small text-muted\">Başlangıç: ${start} • Bitiş: ${due}</div></div>`;
+            }).join('');
+        } else {
+            tasksHtml = '<span class="text-muted">Görev yok</span>';
+        }
+        if (bodyEl) bodyEl.innerHTML = `
+            <div class=\"row\">
+                <div class=\"col-md-6\"><div class=\"border rounded p-3 h-100\"><h6 class=\"fw-semibold mb-2\"><i class=\"fas fa-clipboard-list me-2\"></i>Plan</h6>${planHtml}</div></div>
+                <div class=\"col-md-6\"><div class=\"border rounded p-3 h-100\"><h6 class=\"fw-semibold mb-2\"><i class=\"fas fa-list-check me-2\"></i>Görevler</h6>${tasksHtml}</div></div>
+            </div>`;
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    } catch {
+        try {
+            showToast('Gün detayı yüklenemedi', 'danger');
+        } catch {}
+    }
+}
+
+async function deleteTaskInline(taskId, dateStr){
+    try {
+        const r = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Silinemedi');
+        await openDayDetailPopup(dateStr);
+        try { buildHomeCalendar(); } catch(e){}
+        try { typeof fetchUnreadCount === 'function' && fetchUnreadCount(); } catch(e){}
+        try { typeof pollDesktopNotifications === 'function' && pollDesktopNotifications(); } catch(e){}
+        showToast('Görev silindi', 'success');
+    } catch(e){ showToast(e.message || 'Silinemedi', 'danger'); }
+}
+
+// Update metrics
+function updateMetrics(data) {
+    const formatCurrency = (amount) => {
+        return '₺' + amount.toLocaleString('tr-TR');
+    };
+    
+    $('#total-sales').text(formatCurrency(data.total_sales || 0));
+    $('#total-returns').text(formatCurrency(data.total_returns || 0));
+    $('#net-sales').text(formatCurrency(data.net_sales || 0));
+    $('#target-completion').text((data.target_completion || 0).toFixed(1) + '%');
+    $('#target-details').text('Hedef: ₺' + (data.target_amount || 0).toLocaleString('tr-TR'));
+    
+    // Update returns target
+    // Removed returns target update logic
+    
+    // Update progress bar
+    const completionRate = data.target_completion || 0;
+    $('#target-progress').css('width', Math.min(completionRate, 100) + '%');
+    
+    // Change progress bar color based on completion
+    if (completionRate >= 100) {
+        $('#target-progress').removeClass('bg-warning bg-danger').addClass('bg-success');
+    } else if (completionRate >= 80) {
+        $('#target-progress').removeClass('bg-danger bg-success').addClass('bg-warning');
+    } else {
+        $('#target-progress').removeClass('bg-warning bg-success').addClass('bg-danger');
+    }
+    
+    // Update returns progress bar
+    // Removed returns progress bar update logic
+    
+    // Update card metrics
+    $('#total-sales-card').text(formatCurrency(data.total_sales || 0));
+    $('#total-returns-card').text(formatCurrency(data.total_returns || 0));
+    $('#net-sales-card').text(formatCurrency(data.net_sales || 0));
+    $('#target-completion-card').text((data.target_completion || 0).toFixed(1) + '%');
+}
+
+// Initialize charts
+function initializeCharts() {
+    // Brand Product Chart
+    const brandProductCtx = document.getElementById('brandProductChart').getContext('2d');
+    brandProductChart = new Chart(brandProductCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [],
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    '#2563eb',
+                    '#ef4444',
+                    '#10b981',
+                    '#f59e0b',
+                    '#8b5cf6',
+                    '#06b6d4',
+                    '#ec4899',
+                    '#84cc16',
+                    '#f97316',
+                    '#6366f1'
+                ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        font: {
+                            size: 10
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ₺${value.toLocaleString('tr-TR')} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Update charts with new data
+function updateCharts(data) {
+    // Marka ve ürün grubu tablosunu güncelle
+    if (data.brand_product_sales) {
+        updateBrandProductTable(data.brand_product_sales);
+    }
+    
+    // Marka ve ürün grubu dağılımı
+    if (brandProductChart && data.brand_product_sales) {
+        // Marka ve ürün grubu verilerini işle
+        const labels = data.brand_product_sales.map(item => `${item.brand} - ${item.product_group}`);
+        const values = data.brand_product_sales.map(item => item.total);
+        
+        brandProductChart.data.labels = labels;
+        brandProductChart.data.datasets[0].data = values;
+        brandProductChart.update();
+    }
+}
+
+// Update brand product table
+function updateBrandProductTable(brandProductSales) {
+    const tbody = $('#brand-product-table');
+    
+    if (!brandProductSales || brandProductSales.length === 0) {
+        tbody.html('<tr><td colspan="4" class="text-center text-muted">Henüz satış verisi yok</td></tr>');
+        return;
+    }
+    
+    // Toplam satış hesapla
+    const totalSales = brandProductSales.reduce((sum, item) => sum + item.total, 0);
+    
+    // Verileri satış miktarına göre sırala
+    const sortedData = brandProductSales.sort((a, b) => b.total - a.total);
+    
+    let html = '';
+    sortedData.forEach(item => {
+        const percentage = totalSales > 0 ? ((item.total / totalSales) * 100).toFixed(1) : 0;
+        const formattedAmount = item.total.toLocaleString('tr-TR');
+        
+        html += `
+            <tr>
+                <td><strong>${item.brand}</strong></td>
+                <td>${item.product_group}</td>
+                <td class="text-end text-success fw-bold">₺${formattedAmount}</td>
+                <td class="text-end text-muted">%${percentage}</td>
+            </tr>
+        `;
+    });
+    
+    tbody.html(html);
+}
+
+// Load recent activities
+function loadRecentActivities() {
+    // Recent sales - daha fazla satış al
+    $.ajax({
+        url: '/api/sales/recent',
+        method: 'GET',
+        data: { limit: 50 }, // 50 satış al
+        success: function(data) {
+            updateRecentSales(data.sales);
+        },
+        error: function(xhr) {
+            $('#recent-sales').html('<p class="text-muted text-center">Veri yüklenemedi</p>');
+        }
+    });
+    
+    // Recent returns - daha fazla iade al
+    $.ajax({
+        url: '/api/returns/recent',
+        method: 'GET',
+        data: { limit: 50 }, // 50 iade al
+        success: function(data) {
+            updateRecentReturns(data.returns);
+        },
+        error: function(xhr) {
+            $('#recent-returns').html('<p class="text-muted text-center">Veri yüklenemedi</p>');
+        }
+    });
+}
+
+// Update recent sales
+function updateRecentSales(sales) {
+    const container = $('#recent-sales');
+    if (!sales || sales.length === 0) {
+        container.html('<p class="text-muted text-center">Henüz satış verisi yok</p>');
+        return;
+    }
+    
+    let html = '';
+    // Tüm satışları göster (limit kaldırıldı)
+    sales.forEach(sale => {
+        const customerName = sale.customer_name || 'Bilinmeyen Müşteri';
+        const customerCode = sale.customer_code || 'Kod Yok';
+        const productGroup = sale.product_group || 'Grup Yok';
+        const displayDate = sale.date_formatted || formatTRDate(sale.date);
+        const displayQuantity = sale.original_quantity || sale.quantity || 0;
+        
+        html += `
+            <div class="d-flex align-items-start mb-3 p-3 border-bottom">
+                <div class="flex-shrink-0">
+                    <div class="avatar-sm bg-success text-white rounded-circle d-flex align-items-center justify-content-center">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-1">${sale.product_name || 'Ürün Adı Yok'}</h6>
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i>
+                            <strong>${customerName}</strong> 
+                            <span class="badge bg-light text-dark ms-2">${customerCode}</span>
+                        </small>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-tags me-1"></i>
+                            <strong>Ürün Grubu:</strong> ${productGroup}
+                        </small>
+                    </div>
+                    <div>
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            <strong>Tarih:</strong> ${displayDate}
+                        </small>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <div class="fw-bold text-success mb-1">₺${sale.net_price?.toLocaleString('tr-TR') || 0}</div>
+                    <small class="text-muted d-block">${displayQuantity} adet</small>
+                    <small class="text-muted d-block">₺${sale.unit_price?.toLocaleString('tr-TR') || 0}/adet</small>
+                </div>
+            </div>
+        `;
+    });
+    container.html(html);
+}
+
+// Update recent returns
+function updateRecentReturns(returns) {
+    const container = $('#recent-returns');
+    if (!returns || returns.length === 0) {
+        container.html('<p class="text-muted text-center">Henüz iade verisi yok</p>');
+        return;
+    }
+    
+    let html = '';
+    // Tüm iadeleri göster (limit kaldırıldı)
+    returns.forEach(ret => {
+        const customerName = ret.customer_name || 'Bilinmeyen Müşteri';
+        const customerCode = ret.customer_code || 'Kod Yok';
+        const productGroup = ret.product_group || 'Grup Yok';
+        const displayDate = ret.date_formatted || formatTRDate(ret.date);
+        const displayQuantity = ret.original_quantity || ret.quantity || 0;
+        
+        html += `
+            <div class="d-flex align-items-start mb-3 p-3 border-bottom">
+                <div class="flex-shrink-0">
+                    <div class="avatar-sm bg-danger text-white rounded-circle d-flex align-items-center justify-content-center">
+                        <i class="fas fa-undo"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-1">${ret.product_name || 'Ürün Adı Yok'}</h6>
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i>
+                            <strong>${customerName}</strong> 
+                            <span class="badge bg-light text-dark ms-2">${customerCode}</span>
+                        </small>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-tags me-1"></i>
+                            <strong>Ürün Grubu:</strong> ${productGroup}
+                        </small>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-user-tie me-1"></i>
+                            <strong>Temsilci:</strong> ${ret.representative_name || 'Bilinmeyen'}
+                        </small>
+                    </div>
+                    <div>
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            <strong>Tarih:</strong> ${displayDate}
+                        </small>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <div class="fw-bold text-danger mb-1">₺${ret.net_price?.toLocaleString('tr-TR') || 0}</div>
+                    <small class="text-muted d-block">${displayQuantity} adet</small>
+                    <small class="text-muted d-block">₺${ret.unit_price?.toLocaleString('tr-TR') || 0}/adet</small>
+                </div>
+            </div>
+        `;
+    });
+    container.html(html);
+}
+
+// Error handling
+function showError(message) {
+    const alert = `
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    $('.content-wrapper').prepend(alert);
+}
+
+// Load recent activities on page load
+$(document).ready(function() {
+    loadRecentActivities();
+    loadRepresentativesPerformance(); // Temsilci performansını yükle
+});
+
+// Load representatives performance data
+function loadRepresentativesPerformance() {
+    console.log('🔄 Temsilci performans verisi yükleniyor...');
+    
+    $.ajax({
+        url: '/api/reports/representatives',
+        method: 'GET',
+        beforeSend: function() {
+            console.log('📡 API isteği gönderiliyor...');
+        },
+        success: function(data) {
+            console.log('✅ Temsilci performans verisi başarıyla alındı:', data);
+            updateRepresentativesTable(data);
+        },
+        error: function(xhr, status, error) {
+            console.error('❌ Temsilci performans veri yükleme hatası:', {
+                status: status,
+                error: error,
+                responseText: xhr.responseText,
+                statusCode: xhr.status
+            });
+            
+            let errorMessage = 'Veriler yüklenirken hata oluştu';
+            if (xhr.status === 401) {
+                errorMessage = 'Yetkilendirme hatası - Lütfen tekrar giriş yapın';
+            } else if (xhr.status === 403) {
+                errorMessage = 'Bu sayfaya erişim yetkiniz yok';
+            } else if (xhr.status === 500) {
+                errorMessage = 'Sunucu hatası - Lütfen daha sonra tekrar deneyin';
+            }
+            
+            $('#rep-table-body').html(`
+                <tr>
+                    <td colspan="7" class="text-center text-danger py-4">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${errorMessage}
+                    </td>
+                </tr>
+            `);
+        }
+    });
+}
+
+// Update representatives table
+function updateRepresentativesTable(data) {
+    console.log('🔄 Temsilci tablosu güncelleniyor...');
+    const tbody = $('#rep-table-body');
+    
+    console.log('📊 Gelen veri yapısı:', {
+        hasData: !!data,
+        hasRepresentatives: !!(data && data.representatives),
+        representativesCount: data && data.representatives ? data.representatives.length : 0
+    });
+    
+    if (!data || !data.representatives || data.representatives.length === 0) {
+        console.log('⚠️ Temsilci verisi bulunamadı');
+        tbody.html(`
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Satış departmanında henüz temsilci verisi yok
+                </td>
+            </tr>
+        `);
+        return;
+    }
+    
+    let html = '';
+    data.representatives.forEach(rep => {
+        const salesAmount = rep.total_sales || 0;
+        const returnsAmount = rep.total_returns || 0;
+        const netSales = salesAmount - returnsAmount;
+        const targetCompletion = rep.target_completion || 0;
+        
+        // Durum belirleme
+        let statusBadge = '';
+        if (targetCompletion >= 100) {
+            statusBadge = '<span class="badge bg-success">Hedef Tamamlandı</span>';
+        } else if (targetCompletion >= 80) {
+            statusBadge = '<span class="badge bg-warning">İyi</span>';
+        } else if (targetCompletion >= 50) {
+            statusBadge = '<span class="badge bg-info">Orta</span>';
+        } else {
+            statusBadge = '<span class="badge bg-danger">Düşük</span>';
+        }
+        
+        html += `
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-sm bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center">
+                            <i class="fas fa-user"></i>
+                        </div>
+                                                    <div>
+                                <div class="fw-semibold">${rep.representative_name || 'Bilinmeyen'}</div>
+                                <small class="text-muted">${rep.representative_code || 'Kod Yok'}</small>
+                            </div>
+                    </div>
+                </td>
+                <td class="text-success fw-semibold">₺${salesAmount.toLocaleString('tr-TR')}</td>
+                <td class="text-danger fw-semibold">₺${returnsAmount.toLocaleString('tr-TR')}</td>
+                <td class="fw-semibold">₺${netSales.toLocaleString('tr-TR')}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                            <div class="progress-bar ${targetCompletion >= 100 ? 'bg-success' : targetCompletion >= 80 ? 'bg-warning' : targetCompletion >= 50 ? 'bg-info' : 'bg-danger'}" 
+                                 style="width: ${Math.min(targetCompletion, 100)}%"></div>
+                        </div>
+                        <small class="text-muted">${targetCompletion.toFixed(1)}%</small>
+                    </div>
+                </td>
+                <td>${statusBadge}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewRepresentativeDetails(${rep.representative_id})">
+                        <i class="fas fa-eye me-1"></i>Detay
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.html(html);
+}
+
+// Refresh representatives data
+function refreshRepresentatives() {
+    $('#rep-table-body').html(`
+        <tr>
+            <td colspan="7" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Yükleniyor...</span>
+                </div>
+            </td>
+        </tr>
+    `);
+    loadRepresentativesPerformance();
+}
+
+// View representative details (placeholder function)
+function viewRepresentativeDetails(representativeId) {
+    // Bu fonksiyon gelecekte temsilci detaylarını göstermek için kullanılabilir
+    console.log('Temsilci detayları görüntüleniyor:', representativeId);
+}
+</script>
+{% endblock %} 

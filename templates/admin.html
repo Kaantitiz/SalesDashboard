@@ -1,0 +1,1466 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Paneli - Satış Dashboard{% endblock %}
+{% block page_title %}Admin Paneli{% endblock %}
+
+{% block content %}
+
+
+<!-- Department Panels Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-layer-group me-2"></i>
+                    Departman Panelleri
+                </h5>
+                <button class="btn btn-primary btn-sm" onclick="loadDepartmentPanels()">
+                    <i class="fas fa-sync-alt me-1"></i>Yenile
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row" id="departmentPanelsRow">
+                    <div class="col-12 text-center text-muted py-4">Yükleniyor...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<!-- Target Management Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bullseye me-2"></i>
+                    Temsilci Hedefleri Yönetimi
+                </h5>
+                <div>
+                    <button class="btn btn-success btn-sm me-2" onclick="showBulkTargetModal()">
+                        <i class="fas fa-plus me-1"></i>Toplu Hedef Ekle
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="showAddTargetModal()">
+                        <i class="fas fa-plus me-1"></i>Tekil Hedef Ekle
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Filtreleme -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="targetYearFilter" class="form-label">Yıl:</label>
+                        <select class="form-select form-select-sm" id="targetYearFilter">
+                            <option value="">Tümü</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="targetMonthFilter" class="form-label">Ay:</label>
+                        <select class="form-select form-select-sm" id="targetMonthFilter">
+                            <option value="">Tümü</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="targetStatusFilter" class="form-label">Durum:</label>
+                        <select class="form-select form-select-sm" id="targetStatusFilter">
+                            <option value="">Tümü</option>
+                            <option value="completed">Tamamlandı</option>
+                            <option value="good">İyi</option>
+                            <option value="low">Düşük</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-outline-secondary btn-sm mt-4" onclick="clearTargetFilters()">
+                            <i class="fas fa-times me-1"></i>Filtreleri Temizle
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Temsilci Butonları -->
+                <div id="representativesButtons" class="mb-3">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Yükleniyor...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hedef Detayları Tablosu -->
+                <div class="table-responsive" id="targetDetailsTable" style="display: none;">
+                    <h6 class="mb-3" id="selectedRepresentativeTitle">Seçilen Temsilci: <span id="repName"></span></h6>
+                    <table class="table table-hover" id="targetDetailsTableBody">
+                        <thead>
+                            <tr>
+                                <th>Yıl</th>
+                                <th>Ay</th>
+                                <th>Hedef Tutar</th>
+                                <th>Toplam Satış</th>
+                                <th>Toplam İade</th>
+                                <th>Net Satış</th>
+                                <th>Tamamlama Oranı</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">Temsilci seçin</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Planning Assignment Section removed -->
+
+<!-- Sales Overview Section -->
+<div class="row mb-4">
+    <div class="col-lg-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Temsilci Satış Dağılımı
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height: 300px;">
+                    <canvas id="representativeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Ürün Grubu Satışları
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height: 300px;">
+                    <canvas id="productGroupChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Sales and Returns Section -->
+<div class="row mb-4">
+    <div class="col-lg-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Son Satışlar
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="recentSalesTable">
+                        <thead>
+                            <tr>
+                                <th>Temsilci</th>
+                                <th>Müşteri</th>
+                                <th>Ürün Grubu</th>
+                                <th>Ürün</th>
+                                <th>Adet</th>
+                                <th>Tutar</th>
+                                <th>Tarih</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentSalesTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Yükleniyor...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-undo me-2"></i>
+                    Son İadeler
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="recentReturnsTable">
+                        <thead>
+                            <tr>
+                                <th>Temsilci</th>
+                                <th>Müşteri</th>
+                                <th>Ürün Grubu</th>
+                                <th>Ürün</th>
+                                <th>Adet</th>
+                                <th>Tutar</th>
+                                <th>Tarih</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentReturnsTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Yükleniyor...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Representatives Performance Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-users me-2"></i>
+                    Temsilci Performans Tablosu
+                </h5>
+                <button class="btn btn-primary btn-sm" onclick="refreshRepresentativesData()">
+                    <i class="fas fa-sync-alt me-1"></i>Yenile
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="representativesTable">
+                        <thead>
+                            <tr>
+                                <th>Temsilci</th>
+                                <th>Toplam Satış</th>
+                                <th>Toplam İade</th>
+                                <th>Net Satış</th>
+                                <th>Hedef</th>
+                                <th>Tamamlama Oranı</th>
+                                <th>En Çok Satan Ürün Grubu</th>
+                                <th>En Çok Satan Marka</th>
+                                <th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody id="representativesTableBody">
+                            <tr>
+                                <td colspan="9" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Yükleniyor...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Target Modal -->
+<div class="modal fade" id="addTargetModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Hedef Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTargetForm">
+                    <div class="mb-3">
+                        <label for="targetRepresentative" class="form-label">Temsilci</label>
+                        <select class="form-select" id="targetRepresentative" name="user_id" required>
+                            <option value="">Temsilci seçin</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="targetYear" class="form-label">Yıl</label>
+                                <select class="form-select" id="targetYear" name="year" required>
+                                    <option value="">Yıl seçin</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="targetMonth" class="form-label">Ay</label>
+                                <select class="form-select" id="targetMonth" name="month" required>
+                                    <option value="">Ay seçin</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="targetAmount" class="form-label">Hedef Tutar (₺)</label>
+                        <input type="number" class="form-control" id="targetAmount" name="target_amount" step="0.01" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="addTarget()">Hedef Ekle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Add Targets Modal -->
+<div class="modal fade" id="bulkTargetModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Toplu Hedef Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Aşağıdaki formatı kullanarak toplu hedef ekleyebilirsiniz. Her satır bir temsilci için hedef belirtir.
+                </div>
+                <div class="mb-3">
+                    <label for="bulkTargetsText" class="form-label">Hedef Verileri</label>
+                    <textarea class="form-control" id="bulkTargetsText" rows="10" placeholder="Format: Temsilci Adı, Hedef Tutar&#10;Örnek:&#10;Ahmet Yılmaz, 50000&#10;Mehmet Demir, 75000&#10;Ayşe Kaya, 60000"></textarea>
+                    <div class="form-text">
+                        Her satırda: Temsilci Adı, Hedef Tutar formatında yazın
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="loadSampleTargets()">
+                        <i class="fas fa-download me-1"></i>Örnek Verileri Yükle
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-success" onclick="bulkAddTargets()">Toplu Hedef Ekle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Planning Modal -->
+<div class="modal fade" id="assignPlanningModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Temsilciye Planlama Ata</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="assignPlanningForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="assignRepresentative" class="form-label">Temsilci</label>
+                                <select class="form-select" id="assignRepresentative" required>
+                                    <option value="">Temsilci Seçin</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="assignDate" class="form-label">Tarih</label>
+                                <input type="date" class="form-control" id="assignDate" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="assignYesterdayActivities" class="form-label">Dün Yapılan Aktiviteler</label>
+                                <textarea class="form-control" id="assignYesterdayActivities" rows="4" placeholder="Dün hangi aktiviteleri gerçekleştirdi?"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="assignTodayPlan" class="form-label">Bugün Yapılacaklar</label>
+                                <textarea class="form-control" id="assignTodayPlan" rows="4" placeholder="Bugün hangi aktiviteleri planlıyor?"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="assignChallenges" class="form-label">Karşılaşılan Zorluklar</label>
+                                <textarea class="form-control" id="assignChallenges" rows="4" placeholder="Karşılaştığı zorluklar nelerdir?"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="assignPlanning()">Planlamayı Ata</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Planning Modal -->
+<div class="modal fade" id="editPlanningModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Planlama Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editPlanningForm">
+                    <input type="hidden" id="editPlanningId">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="editYesterdayActivities" class="form-label">Dün Yapılan Aktiviteler</label>
+                            <textarea class="form-control" id="editYesterdayActivities" rows="4"></textarea>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editTodayPlan" class="form-label">Bugün Yapılacaklar</label>
+                            <textarea class="form-control" id="editTodayPlan" rows="4"></textarea>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editChallenges" class="form-label">Karşılaşılan Zorluklar</label>
+                            <textarea class="form-control" id="editChallenges" rows="4"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="updatePlanningFromAdmin()">Güncelle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Temsilci Hedef Detayları Modal -->
+<div class="modal fade" id="targetDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-bullseye me-2"></i>
+                    Temsilci Hedef Detayları
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="targetDetailsTableBody">
+                        <thead>
+                            <tr>
+                                <th>Yıl</th>
+                                <th>Ay</th>
+                                <th>Hedef Tutar</th>
+                                <th>Toplam Satış</th>
+                                <th>Toplam İade</th>
+                                <th>Net Satış</th>
+                                <th>Tamamlama Oranı</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>
+                                    Hedef detayları yükleniyor...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let representativeChart, productGroupChart;
+
+async function loadDepartmentPanels(){
+    const row = document.getElementById('departmentPanelsRow');
+    if (!row) return;
+    row.innerHTML = '<div class="col-12 text-center text-muted py-4">Yükleniyor...</div>';
+    try {
+        const res = await fetch('/auth/departments');
+        const data = await res.json();
+        const departments = (data && data.departments) ? data.departments.filter(d=> d.is_active !== false) : [];
+        if (!departments.length){
+            row.innerHTML = '<div class="col-12 text-center text-muted py-4">Departman bulunamadı</div>';
+            return;
+        }
+        row.innerHTML = departments.map(dep=>{
+            const name = dep.name || 'Departman';
+            const manager = dep.manager_name ? `<small class=\"text-muted\">Yönetici: ${dep.manager_name}</small>` : '<small class=\"text-muted\">Yönetici atanmamış</small>';
+            const defaultRole = dep.default_role_title ? `<span class=\"badge bg-light text-dark ms-2\">${dep.default_role_title}</span>` : '';
+            const panelPath = getDepartmentPanelPath(name);
+            return `
+            <div class=\"col-lg-3 col-md-4 col-sm-6 mb-3\">
+                <div class=\"card h-100\">
+                    <div class=\"card-body\">
+                        <div class=\"d-flex align-items-center mb-2\">
+                            <div class=\"rounded-circle bg-primary text-white d-flex align-items-center justify-content-center\" style=\"width:40px;height:40px;\">
+                                <i class=\"fas fa-building\"></i>
+                            </div>
+                            <div class=\"ms-2\">
+                                <div class=\"fw-bold\">${name}${defaultRole}</div>
+                                ${manager}
+                            </div>
+                        </div>
+                        <div class=\"small text-muted\">Kullanıcı Sayısı: ${dep.user_count ?? '-'} </div>
+                    </div>
+                    <div class=\"card-footer bg-transparent border-0\">
+                        <div class=\"d-grid gap-2\">
+                            <a href=\"${panelPath}\" class=\"btn btn-sm btn-outline-primary\" title=\"${name}\">\n                                <i class=\"fas fa-window-restore me-1\"></i> Departman Paneli\n                            </a>
+                            <div>
+                                <select id=\"depUserSel_${dep.id}\" class=\"form-select form-select-sm mb-2\">\n                                    <option value=\"\">Kullanıcı seç</option>\n                                </select>
+                                <button class=\"btn btn-sm btn-outline-secondary w-100\" onclick=\"openUserPanelFromCard(${dep.id})\">\n                                    <i class=\"fas fa-user me-1\"></i> Kullanıcı Paneli\n                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+        // Kullanıcı seçimlerini doldur
+        try {
+            await Promise.all(departments.map(async dep=>{
+                try {
+                    const r = await fetch(`/auth/departments/${dep.id}/users`);
+                    const d = await r.json();
+                    const users = (d.users||[]).filter(u=> u.is_active !== false);
+                    const sel = document.getElementById(`depUserSel_${dep.id}`);
+                    if (sel){
+                        users.slice(0,50).forEach(u=>{
+                            const opt = document.createElement('option');
+                            opt.value = u.id;
+                            opt.textContent = u.full_name || u.username || (`Kullanıcı #${u.id}`);
+                            sel.appendChild(opt);
+                        });
+                    }
+                } catch {}
+            }));
+        } catch {}
+    } catch (e) {
+        row.innerHTML = '<div class="col-12 text-center text-danger py-4">Departmanlar yüklenemedi</div>';
+    }
+}
+
+function getDepartmentPanelPath(name){
+    const n = (name||'').toLowerCase();
+    if (n.includes('satış') || n.includes('satis')) return '/panel/sales';
+    if (n.includes('satın') || n.includes('satin') || n.includes('purchasing')) return '/panel/purchasing';
+    return '/panel/department';
+}
+
+async function openUserPanelFromCard(deptId){
+    try {
+        const sel = document.getElementById(`depUserSel_${deptId}`);
+        if (!sel) return;
+        if (!sel.options || sel.options.length <= 1){
+            const r = await fetch(`/auth/departments/${deptId}/users`);
+            const d = await r.json();
+            (d.users||[]).filter(u=> u.is_active !== false).forEach(u=>{
+                const opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = u.full_name || u.username || (`Kullanıcı #${u.id}`);
+                sel.appendChild(opt);
+            });
+        }
+        const uid = sel.value;
+        if (!uid){ sel.focus(); return; }
+        window.open(`/user?view_user_id=${encodeURIComponent(uid)}&clean=1`, '_blank');
+    } catch {}
+}
+
+// Document ready
+$(document).ready(function() {
+    console.log('Document ready - Admin panel script loaded');
+    
+
+    
+    // Load initial data
+    console.log('🔄 Loading initial data...');
+    loadRepresentativesData();
+    loadChartsData();
+    loadRecentSales();
+    loadRecentReturns();
+    loadDepartmentPanels();
+    loadPlanningFilters();
+    loadPlanningAssignments();
+    populateTargetForm();
+    console.log('✅ Initial data loading completed');
+    
+    // Test if representatives table exists
+    const representativesTable = $('#representativesTable');
+    if (representativesTable.length > 0) {
+        console.log('✅ Representatives table found');
+    } else {
+        console.log('❌ Representatives table NOT found');
+    }
+    
+    // Test if representatives table body exists
+    const representativesTableBody = $('#representativesTableBody');
+    if (representativesTableBody.length > 0) {
+        console.log('✅ Representatives table body found');
+    } else {
+        console.log('❌ Representatives table body NOT found');
+    }
+    
+    // Test if charts containers exist
+    const representativeChart = document.getElementById('representativeChart');
+    const productGroupChart = document.getElementById('productGroupChart');
+    
+    if (representativeChart) {
+        console.log('✅ Representative chart container found');
+    } else {
+        console.log('❌ Representative chart container NOT found');
+    }
+    
+    if (productGroupChart) {
+        console.log('✅ Product group chart container found');
+    } else {
+        console.log('❌ Product group chart container NOT found');
+    }
+    
+    // Test jQuery availability
+    if (typeof $ !== 'undefined') {
+        console.log('✅ jQuery is available');
+    } else {
+        console.log('❌ jQuery is NOT available');
+    }
+    
+    // Test Chart.js availability
+    if (typeof Chart !== 'undefined') {
+        console.log('✅ Chart.js is available');
+    } else {
+        console.log('❌ Chart.js is NOT available');
+    }
+    
+    // Auto refresh every 5 minutes
+    setInterval(function() {
+        console.log('🔄 Auto refreshing data...');
+        loadRepresentativesData();
+        loadChartsData();
+        loadRecentSales();
+        loadRecentReturns();
+        loadPlanningAssignments();
+    }, 300000);
+});
+
+// Load targets
+// Eski loadTargets ve updateTargetsTable fonksiyonları kaldırıldı
+// Artık temsilci butonları kullanılıyor
+
+// Load representatives data
+function loadRepresentativesData() {
+    $.ajax({
+        url: '/api/sales/representatives',
+        method: 'GET',
+        success: function(data) {
+            if (data.success && data.representatives) {
+                updateRepresentativesTable(data.representatives);
+            } else {
+                $('#representativesTableBody').html('<tr><td colspan="7" class="text-center text-muted">API hatası veya veri bulunamadı</td></tr>');
+            }
+        },
+        error: function(xhr) {
+            $('#representativesTableBody').html('<tr><td colspan="7" class="text-center text-muted">Veri yüklenemedi</td></tr>');
+        }
+    });
+}
+
+function updateRepresentativesTable(representatives) {
+    const tbody = $('#representativesTableBody');
+    if (!representatives || representatives.length === 0) {
+        tbody.html('<tr><td colspan="7" class="text-center text-muted">Henüz temsilci verisi yok</td></tr>');
+        return;
+    }
+    
+    let html = '';
+    representatives.forEach(function(rep) {
+        // API'den gelen veri formatına göre düzenleme
+        const completionRate = rep.completion_rate || 0;
+        const statusClass = completionRate >= 100 ? 'success' : 
+                           completionRate >= 80 ? 'warning' : 'danger';
+        const statusText = completionRate >= 100 ? 'Başarılı' : 
+                          completionRate >= 80 ? 'İyi' : 'Düşük';
+        
+        // En çok satan ürün grubu
+        let topProductGroup = 'Veri yok';
+        if (rep.product_groups && rep.product_groups.length > 0) {
+            const top = rep.product_groups.reduce((a, b) => (a.total || 0) > (b.total || 0) ? a : b);
+            topProductGroup = top.name || 'Bilinmeyen';
+        }
+        
+        // En çok satan marka
+        let topBrand = 'Veri yok';
+        if (rep.brands && rep.brands.length > 0) {
+            const top = rep.brands.reduce((a, b) => (a.total || 0) > (b.total || 0) ? a : b);
+            topBrand = top.name || 'Bilinmeyen';
+        }
+        
+        html += '<tr>' +
+            '<td><strong>' + (rep.representative_name || 'Bilinmeyen') + '</strong><br><small class="text-muted">' + (rep.representative_code || '') + '</small></td>' +
+            '<td class="text-success fw-bold">₺' + (rep.total_sales || 0).toLocaleString('tr-TR') + '</td>' +
+            '<td class="text-danger fw-bold">₺' + (rep.total_returns || 0).toLocaleString('tr-TR') + '</td>' +
+            '<td class="text-primary fw-bold">₺' + (rep.net_sales || 0).toLocaleString('tr-TR') + '</td>' +
+            '<td class="text-info fw-bold">₺' + (rep.target_amount || 0).toLocaleString('tr-TR') + '</td>' +
+            '<td>' +
+                '<div class="progress" style="height: 8px;">' +
+                    '<div class="progress-bar bg-' + statusClass + '" style="width: ' + Math.min(completionRate, 100) + '%"></div>' +
+                '</div>' +
+                '<small class="text-muted">' + completionRate.toFixed(1) + '%</small>' +
+            '</td>' +
+            '<td><small>' + topProductGroup + '</small></td>' +
+            '<td><small>' + topBrand + '</small></td>' +
+            '<td><span class="badge bg-' + statusClass + '">' + statusText + '</span></td>' +
+        '</tr>';
+    });
+    tbody.html(html);
+}
+
+// Load charts data
+function loadChartsData() {
+    console.log('🔄 Loading charts data...');
+    $.ajax({
+        url: '/api/sales/charts-data',
+        method: 'GET',
+        success: function(data) {
+            console.log('✅ Charts data loaded:', data);
+            if (data.success) {
+                updateCharts(data);
+            } else {
+                console.error('❌ Charts API returned success: false');
+            }
+        },
+        error: function(xhr) {
+            console.error('❌ Charts data load error:', xhr);
+        }
+    });
+}
+
+function updateCharts(data) {
+    console.log('🔄 Updating charts with data:', data);
+    // Representative Chart
+    if (representativeChart) {
+        representativeChart.destroy();
+    }
+    
+    const repCtx = document.getElementById('representativeChart').getContext('2d');
+    representativeChart = new Chart(repCtx, {
+        type: 'doughnut',
+        data: {
+            labels: data.representative_sales.map(item => item.name),
+            datasets: [{
+                data: data.representative_sales.map(item => item.total),
+                backgroundColor: [
+                    '#2563eb', '#ef4444', '#10b981', '#f59e0b',
+                    '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'
+                ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+    
+    // Product Group Chart
+    if (productGroupChart) {
+        productGroupChart.destroy();
+    }
+    
+    const pgCtx = document.getElementById('productGroupChart').getContext('2d');
+    console.log('🔄 Creating product group chart');
+    productGroupChart = new Chart(pgCtx, {
+        type: 'bar',
+        data: {
+            labels: data.product_sales.map(item => item.name),
+            datasets: [{
+                label: 'Satış Tutarı',
+                data: data.product_sales.map(item => item.total),
+                backgroundColor: '#2563eb',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₺' + (value / 1000000) + 'M';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    console.log('✅ Charts updated successfully');
+}
+
+// Target management
+function populateTargetForm() {
+    console.log('🔄 Populating target form...');
+    // Populate years
+    const currentYear = new Date().getFullYear();
+    for (let i = currentYear - 2; i <= currentYear + 2; i++) {
+        $('#targetYear').append('<option value="' + i + '">' + i + '</option>');
+    }
+    $('#targetYear').val(currentYear);
+    
+    // Populate months
+    const months = [
+        'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+        'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+    ];
+    months.forEach((month, index) => {
+        $('#targetMonth').append('<option value="' + (index + 1) + '">' + month + '</option>');
+    });
+    $('#targetMonth').val(new Date().getMonth() + 1);
+    
+    // Load representatives
+    console.log('🔄 Loading representatives for target form...');
+    $.ajax({
+        url: '/api/users/representatives',
+        method: 'GET',
+        success: function(data) {
+            console.log('✅ Representatives loaded for target form:', data);
+            data.representatives.forEach(function(rep) {
+                $('#targetRepresentative').append('<option value="' + rep.id + '">' + rep.name + '</option>');
+            });
+        },
+        error: function(xhr) {
+            console.error('❌ Representatives load error for target form:', xhr);
+        }
+    });
+    console.log('✅ Target form populated');
+}
+
+function showAddTargetModal() {
+    console.log('🔄 Showing add target modal');
+    $('#addTargetModal').modal('show');
+}
+
+function showBulkTargetModal() {
+    console.log('🔄 Showing bulk target modal');
+    $('#bulkTargetModal').modal('show');
+}
+
+function loadSampleTargets() {
+    console.log('🔄 Loading sample targets');
+    const sampleData = `Ahmet Yılmaz, 50000
+Mehmet Demir, 75000
+Ayşe Kaya, 60000
+Fatma Özkan, 45000
+Ali Çelik, 80000
+Zeynep Arslan, 55000
+Mustafa Koç, 70000
+Elif Yıldız, 65000`;
+    $('#bulkTargetsText').val(sampleData);
+    console.log('✅ Sample targets loaded');
+}
+
+function bulkAddTargets() {
+    console.log('🔄 Bulk adding targets');
+    const text = $('#bulkTargetsText').val().trim();
+    if (!text) {
+        showError('Lütfen hedef verilerini girin');
+        return;
+    }
+    
+    const lines = text.split('\n').filter(line => line.trim());
+    const targets = [];
+    
+    for (const line of lines) {
+        const parts = line.split(',').map(part => part.trim());
+        if (parts.length >= 2) {
+            const representative_name = parts[0];
+            const target_amount = parseFloat(parts[1]);
+            
+            if (representative_name && !isNaN(target_amount)) {
+                targets.push({
+                    representative_name: representative_name,
+                    target_amount: target_amount
+                });
+            }
+        }
+    }
+    
+    if (targets.length === 0) {
+        showError('Geçerli hedef verisi bulunamadı');
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/targets/bulk-create',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ targets: targets }),
+        success: function(response) {
+            console.log('✅ Bulk targets added successfully:', response);
+            showSuccess(response.message);
+            $('#bulkTargetModal').modal('hide');
+            $('#bulkTargetsText').val('');
+            loadTargets();
+        },
+        error: function(xhr) {
+            console.error('❌ Bulk targets add error:', xhr);
+            const response = xhr.responseJSON;
+            showError(response ? response.error : 'Toplu hedef ekleme hatası');
+        }
+    });
+}
+
+function addTarget() {
+    console.log('🔄 Adding target');
+    const formData = {
+        user_id: $('#targetRepresentative').val(),
+        year: $('#targetYear').val(),
+        month: $('#targetMonth').val(),
+        target_amount: parseFloat($('#targetAmount').val())
+    };
+    
+    $.ajax({
+        url: '/api/targets',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(formData),
+        success: function(response) {
+            console.log('✅ Target added successfully:', response);
+            showSuccess('Hedef başarıyla eklendi');
+            $('#addTargetModal').modal('hide');
+            $('#addTargetForm')[0].reset();
+            loadTargets();
+        },
+        error: function(xhr) {
+            console.error('❌ Target add error:', xhr);
+            const response = xhr.responseJSON;
+            showError(response ? response.error : 'Hedef ekleme hatası');
+        }
+    });
+}
+
+function editTarget(targetId) {
+    console.log('🔄 Edit target:', targetId);
+    // Implement edit functionality
+    console.log('Edit target:', targetId);
+}
+
+function deleteTarget(targetId) {
+    console.log('🔄 Delete target:', targetId);
+    if (confirm('Bu hedefi silmek istediğinizden emin misiniz?')) {
+        $.ajax({
+            url: '/api/targets/' + targetId,
+            method: 'DELETE',
+            success: function(response) {
+                console.log('✅ Target deleted successfully:', response);
+                showSuccess('Hedef başarıyla silindi');
+                loadTargets();
+            },
+            error: function(xhr) {
+                console.error('❌ Target delete error:', xhr);
+                const response = xhr.responseJSON;
+                showError(response ? response.error : 'Hedef silme hatası');
+            }
+        });
+    }
+}
+
+function refreshRepresentativesData() {
+    console.log('🔄 Refreshing representatives data...');
+    loadRepresentativesData();
+    loadChartsData();
+    loadRecentSales();
+    loadRecentReturns();
+}
+
+function loadRecentSales() {
+    console.log('🔄 Loading recent sales...');
+    $.ajax({
+        url: '/api/sales/recent?limit=10',
+        method: 'GET',
+        success: function(response) {
+            console.log('✅ Recent sales loaded:', response);
+            updateRecentSalesTable(response.sales || []);
+        },
+        error: function(xhr) {
+            console.error('❌ Recent sales load error:', xhr);
+            showError('Son satışlar yüklenirken hata oluştu');
+        }
+    });
+}
+
+function loadRecentReturns() {
+    console.log('🔄 Loading recent returns...');
+    $.ajax({
+        url: '/api/returns/recent?limit=10',
+        method: 'GET',
+        success: function(response) {
+            console.log('✅ Recent returns loaded:', response);
+            updateRecentReturnsTable(response.returns || []);
+        },
+        error: function(xhr) {
+            console.error('❌ Recent returns load error:', xhr);
+            showError('Son iadeler yüklenirken hata oluştu');
+        }
+    });
+}
+
+function updateRecentSalesTable(sales) {
+    const tbody = $('#recentSalesTableBody');
+    tbody.empty();
+    
+    if (sales.length === 0) {
+        tbody.append(`
+            <tr>
+                <td colspan="6" class="text-center py-3">
+                    <i class="fas fa-info-circle text-muted me-2"></i>
+                    Henüz satış verisi bulunmuyor
+                </td>
+            </tr>
+        `);
+        return;
+    }
+    
+    sales.forEach(sale => {
+        // TARIH alanından gelen formatlanmış tarihi kullan
+        const displayDate = sale.date_formatted || formatTRDate(sale.date);
+        const customerInfo = `${sale.customer_name || 'Müşteri'} <span class="badge bg-light text-dark ms-1">${sale.customer_code || 'Kod Yok'}</span>`;
+        const displayQuantity = sale.original_quantity || sale.quantity || 0;
+        
+        const row = `
+            <tr>
+                <td><strong>${sale.representative_name || 'Bilinmeyen'}</strong></td>
+                <td>${customerInfo}</td>
+                <td><small class="text-muted">${sale.product_group || 'Grup Yok'}</small></td>
+                <td>${sale.product_name || 'Ürün'}</td>
+                <td><span class="badge bg-info">${displayQuantity}</span></td>
+                <td><span class="badge bg-success">₺${sale.net_price?.toLocaleString('tr-TR', {minimumFractionDigits: 2}) || 0}</span></td>
+                <td><small class="text-muted">${displayDate}</small></td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
+}
+
+function updateRecentReturnsTable(returns) {
+    const tbody = $('#recentReturnsTableBody');
+    tbody.empty();
+    
+    if (returns.length === 0) {
+        tbody.append(`
+            <tr>
+                <td colspan="6" class="text-center py-3">
+                    <i class="fas fa-info-circle text-muted me-2"></i>
+                    Henüz iade verisi bulunmuyor
+                </td>
+            </tr>
+        `);
+        return;
+    }
+    
+    returns.forEach(ret => {
+        // TARIH alanından gelen formatlanmış tarihi kullan
+        const displayDate = ret.date_formatted || formatTRDate(ret.date);
+        const customerInfo = `${ret.customer_name || 'Müşteri'} <span class="badge bg-light text-dark ms-1">${ret.customer_code || 'Kod Yok'}</span>`;
+        const displayQuantity = ret.original_quantity || ret.quantity || 0;
+        
+        const row = `
+            <tr>
+                <td><strong>${ret.representative_name || 'Bilinmeyen'}</strong></td>
+                <td>${customerInfo}</td>
+                <td><small class="text-muted">${ret.product_group || 'Grup Yok'}</small></td>
+                <td>${ret.product_name || 'Ürün'}</td>
+                <td><span class="badge bg-info">${displayQuantity}</span></td>
+                <td><span class="badge bg-warning">₺${ret.net_price?.toLocaleString('tr-TR', {minimumFractionDigits: 2}) || 0}</span></td>
+                <td><small class="text-muted">${displayDate}</small></td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
+}
+
+// Utility functions
+function getMonthName(month) {
+    const months = [
+        'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+        'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+    ];
+    return months[month - 1] || 'Bilinmeyen';
+}
+
+function showSuccess(message) {
+    console.log('✅ Success message:', message);
+    const alert = `
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    $('.content-wrapper').prepend(alert);
+}
+
+function showError(message) {
+    console.error('❌ Error message:', message);
+    const alert = `
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    $('.content-wrapper').prepend(alert);
+}
+
+// Legacy planning functions removed
+
+// Legacy planning functions removed
+
+// Legacy planning functions removed
+
+// Load representatives for assignment
+function loadRepresentativesForAssignment() {
+    // Check if jQuery is loaded
+    if (typeof $ === 'undefined') {
+        return;
+    }
+    
+    // Check if select element exists
+    const select = $('#assignRepresentative');
+    if (select.length === 0) {
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/representatives',
+        method: 'GET',
+        success: function(response) {
+            if (response.success && response.representatives) {
+                select.empty();
+                select.append('<option value="">Temsilci Seçin</option>');
+                
+                response.representatives.forEach(rep => {
+                    select.append(`<option value="${rep.id}">${rep.first_name} ${rep.last_name} ${rep.representative_code ? '(' + rep.representative_code + ')' : ''}</option>`);
+                });
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Representatives load error:', error);
+        }
+    });
+}
+
+// Edit planning from admin
+// Legacy planning functions removed
+
+// Delete planning from admin
+// Legacy planning functions removed
+
+// Update planning from admin
+// Legacy planning functions removed
+
+
+
+// Open planning modal
+// Legacy planning functions removed
+
+// Load modal data
+// Legacy planning functions removed
+
+// Show planning assignment modal
+// Legacy planning functions removed
+
+// Load planning filters
+// Legacy planning functions removed
+
+// Load representatives for filter
+// Legacy planning functions removed
+
+// Clear planning filters
+// Legacy planning functions removed
+
+// Export planning data
+// Legacy planning functions removed
+
+// Update planning assignments with filters
+// Legacy planning functions removed
+
+// Temsilci Hedef Detayları Modal
+function showRepresentativeTargetDetails(representativeId, representativeName) {
+    console.log('🔄 Showing target details for:', representativeName, 'ID:', representativeId);
+    
+    // Modal başlığını güncelle
+    $('#repName').text(representativeName);
+    
+    // Hedef detaylarını yükle
+    loadRepresentativeTargetDetails(representativeId);
+    
+    // Modal'ı göster
+    $('#targetDetailsModal').modal('show');
+}
+
+// Temsilci hedef detaylarını yükle
+function loadRepresentativeTargetDetails(representativeId) {
+    console.log('🔄 Loading target details for representative:', representativeId);
+    
+    $.ajax({
+        url: '/api/targets/representative/' + representativeId,
+        method: 'GET',
+        success: function(response) {
+            console.log('✅ Target details loaded:', response);
+            if (response.success) {
+                updateTargetDetailsTable(response.targets);
+            } else {
+                showError('Hedef detayları yüklenirken hata oluştu');
+            }
+        },
+        error: function(xhr) {
+            console.error('❌ Target details load error:', xhr);
+            showError('Hedef detayları yüklenirken hata oluştu');
+        }
+    });
+}
+
+// Hedef detayları tablosunu güncelle
+function updateTargetDetailsTable(targets) {
+    const tbody = $('#targetDetailsTableBody tbody');
+    tbody.empty();
+    
+    if (!targets || targets.length === 0) {
+        tbody.append(`
+            <tr>
+                <td colspan="9" class="text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Bu temsilci için henüz hedef tanımlanmamış
+                </td>
+            </tr>
+        `);
+        return;
+    }
+    
+    targets.forEach(target => {
+        const monthName = getMonthName(target.month);
+        const statusClass = target.completion_rate >= 100 ? 'success' : 
+                           target.completion_rate >= 80 ? 'warning' : 'danger';
+        const statusText = target.completion_rate >= 100 ? 'Tamamlandı' : 
+                          target.completion_rate >= 80 ? 'İyi' : 'Düşük';
+        
+        const row = `
+            <tr>
+                <td>${target.year}</td>
+                <td>${monthName}</td>
+                <td class="fw-bold">₺${target.target_amount.toLocaleString('tr-TR')}</td>
+                <td class="text-success">₺${target.total_sales.toLocaleString('tr-TR')}</td>
+                <td class="text-danger">₺${target.total_returns.toLocaleString('tr-TR')}</td>
+                <td class="text-primary fw-bold">₺${target.net_sales.toLocaleString('tr-TR')}</td>
+                <td>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-${statusClass}" style="width: ${Math.min(target.completion_rate, 100)}%"></div>
+                    </div>
+                    <small class="text-muted">${target.completion_rate.toFixed(1)}%</small>
+                </td>
+                <td><span class="badge bg-${statusClass}">${statusText}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editTarget(${target.id})" title="Düzenle">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteTarget(${target.id})" title="Sil">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
+}
+
+// Temsilci butonlarını yükle (filtresiz)
+function loadRepresentativesButtons() {
+    loadRepresentativesButtonsWithFilters();
+}
+
+// Temsilci butonlarını filtrelerle yükle
+function loadRepresentativesButtonsWithFilters(year, month, status) {
+    console.log('🔄 Loading representatives buttons with filters:', { year, month, status });
+    
+    // URL parametrelerini oluştur
+    let url = '/api/sales/representatives';
+    const params = [];
+    
+    if (year) params.push(`year=${year}`);
+    if (month) params.push(`month=${month}`);
+    if (status) params.push(`status=${status}`);
+    
+    if (params.length > 0) {
+        url += '?' + params.join('&');
+    }
+    
+    console.log('📡 API URL:', url);
+    
+    $.ajax({
+        url: url,
+        method: 'GET',
+        success: function(data) {
+            if (data.success && data.representatives) {
+                updateRepresentativesButtons(data.representatives);
+                console.log('✅ Filtrelenmiş veriler yüklendi:', data.representatives.length, 'temsilci');
+            } else {
+                $('#representativesButtons').html('<p class="text-muted text-center">Temsilci verileri yüklenemedi</p>');
+            }
+        },
+        error: function(xhr) {
+            console.error('❌ Representatives load error:', xhr);
+            $('#representativesButtons').html('<p class="text-muted text-center">Veri yüklenemedi</p>');
+        }
+    });
+}
+
+// Temsilci butonlarını güncelle
+function updateRepresentativesButtons(representatives) {
+    const container = $('#representativesButtons');
+    
+    if (!representatives || representatives.length === 0) {
+        container.html('<p class="text-muted text-center">Henüz temsilci verisi yok</p>');
+        return;
+    }
+    
+    let html = '<div class="row">';
+    
+    representatives.forEach(rep => {
+        const completionRate = rep.completion_rate || 0;
+        let statusClass = 'outline-secondary';
+        let statusIcon = 'fa-user';
+        
+        if (completionRate >= 100) {
+            statusClass = 'success';
+            statusIcon = 'fa-check-circle';
+        } else if (completionRate >= 80) {
+            statusClass = 'warning';
+            statusIcon = 'fa-exclamation-triangle';
+        } else if (completionRate > 0) {
+            statusClass = 'danger';
+            statusIcon = 'fa-times-circle';
+        }
+        
+        html += `
+            <div class="col-md-3 col-sm-6 mb-2">
+                <button class="btn btn-${statusClass} w-100 text-start" 
+                        onclick="showRepresentativeTargetDetails(${rep.representative_id}, '${rep.representative_name}')">
+                    <div class="d-flex align-items-center">
+                        <i class="fas ${statusIcon} me-2"></i>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">${rep.representative_name}</div>
+                            <small class="text-muted">${rep.representative_code || ''}</small>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">Hedef: ₺${(rep.target_amount || 0).toLocaleString('tr-TR')}</small><br>
+                        <small class="text-muted">Oran: %${completionRate.toFixed(1)}</small>
+                    </div>
+                </button>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.html(html);
+}
+
+// Hedef filtrelerini temizle
+function clearTargetFilters() {
+    $('#targetYearFilter').val('');
+    $('#targetMonthFilter').val('');
+    $('#targetStatusFilter').val('');
+    console.log('🧹 Filtreler temizlendi');
+    loadRepresentativesButtons();
+}
+
+// Hedef filtrelerini uygula
+function applyTargetFilters() {
+    const year = $('#targetYearFilter').val();
+    const month = $('#targetMonthFilter').val();
+    const status = $('#targetStatusFilter').val();
+    
+    console.log('🔍 Filtreler uygulanıyor:', { year, month, status });
+    
+    // Filtreleme parametrelerini API'ye gönder
+    loadRepresentativesButtonsWithFilters(year, month, status);
+}
+
+// Sayfa yüklendiğinde temsilci butonlarını yükle
+$(document).ready(function() {
+    loadTargetFilters();
+    loadRepresentativesButtons();
+});
+
+// Hedef filtrelerini yükle
+function loadTargetFilters() {
+    const currentYear = new Date().getFullYear();
+    const yearSelect = $('#targetYearFilter');
+    const monthSelect = $('#targetMonthFilter');
+    
+    // Yıl filtresi
+    yearSelect.empty().append('<option value="">Tümü</option>');
+    for (let year = currentYear - 2; year <= currentYear + 1; year++) {
+        yearSelect.append(`<option value="${year}">${year}</option>`);
+    }
+    
+    // Ay filtresi
+    monthSelect.empty().append('<option value="">Tümü</option>');
+    const months = [
+        'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+        'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+    ];
+    months.forEach((month, index) => {
+        monthSelect.append(`<option value="${index + 1}">${month}</option>`);
+    });
+    
+    // Filtre değişikliklerini dinle
+    yearSelect.on('change', applyTargetFilters);
+    monthSelect.on('change', applyTargetFilters);
+    $('#targetStatusFilter').on('change', applyTargetFilters);
+}
+</script>
+{% endblock %} 

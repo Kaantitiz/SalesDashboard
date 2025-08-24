@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Within The Company{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary-color: #64748b;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #06b6d4;
+            --dark-color: #1e293b;
+            --light-color: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+        }
+        
+        /* Dark Mode Variables */
+        [data-theme="dark"] {
+            --primary-color: #3b82f6;
+            --primary-dark: #2563eb;
+            --secondary-color: #94a3b8;
+            --success-color: #22c55e;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #06b6d4;
+            --dark-color: #0f172a;
+            --light-color: #1e293b;
+            --border-color: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --bg-primary: #1e293b;
+            --bg-secondary: #0f172a;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        /* Sidebar Styles */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 280px;
+            background: linear-gradient(180deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: white;
+            z-index: 1030;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+        
+        /* Collapsed sidebar (desktop) */
+        @media (min-width: 1025px) {
+            .sidebar.collapsed {
+                width: 72px;
+            }
+            .sidebar.collapsed .sidebar-brand span {
+                display: none;
+            }
+            .sidebar.collapsed .nav-link span {
+                display: none;
+            }
+            .sidebar.collapsed .nav-link {
+                justify-content: flex-start;
+                padding: 0.875rem 0.75rem;
+                text-align: left;
+            }
+            .sidebar.collapsed:hover {
+                width: 280px;
+            }
+            .sidebar.collapsed:hover .sidebar-brand span,
+            .sidebar.collapsed:hover .nav-link span {
+                display: inline;
+            }
+        }
+        
+        .sidebar-header {
+            padding: 2rem 1.5rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1rem;
+        }
+        
+        .sidebar-brand {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            line-height: 1.2;
+        }
+        
+        .sidebar-brand:hover {
+            color: white;
+            text-decoration: none;
+        }
+        
+        .sidebar-nav {
+            padding: 0 1rem;
+        }
+        
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            border-radius: 0.75rem;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            position: relative;
+            justify-content: flex-start;
+            text-align: left;
+        }
+        
+        .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateX(4px);
+        }
+        
+        .nav-link.active {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: var(--bg-secondary);
+        }
+        
+        /* Content width reacts to collapsed sidebar (desktop) */
+        @media (min-width: 1025px) {
+            .sidebar.collapsed ~ .main-content {
+                margin-left: 72px;
+            }
+            .sidebar.collapsed:hover ~ .main-content {
+                margin-left: 280px;
+            }
+        }
+        
+        .content-wrapper {
+            padding: 2rem;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        
+        /* Header */
+        .top-header {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            margin-bottom: 2rem;
+            border-radius: 0 0 1rem 1rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s ease;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .page-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+            transition: color 0.3s ease;
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .user-info {
+            text-align: right;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+        
+        .user-role {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: capitalize;
+            transition: color 0.3s ease;
+        }
+        
+        /* Theme Toggle Button */
+        .theme-toggle {
+            background: none;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+        }
+        
+        .theme-toggle:hover {
+            background-color: var(--border-color);
+            transform: scale(1.1);
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transform: translateY(-2px);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        /* Buttons */
+        .btn {
+            border-radius: 0.75rem;
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.2s ease;
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, #1e40af 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning-color) 0%, #d97706 100%);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%);
+            color: white;
+        }
+        
+        /* Forms */
+        .form-control, .form-select {
+            border-radius: 0.75rem;
+            border: 2px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            outline: none;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            transition: color 0.3s ease;
+        }
+        
+        /* Tables */
+        .table {
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            background-color: var(--bg-primary);
+            transition: all 0.3s ease;
+        }
+        
+        .table thead th {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 0.85rem;
+        }
+        
+        .table tbody td {
+            padding: 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+        
+        .table tbody tr:hover {
+            background-color: var(--bg-secondary);
+        }
+        
+        /* Alerts */
+        .alert {
+            border-radius: 0.75rem;
+            border: none;
+            padding: 1rem 1.25rem;
+            font-weight: 500;
+        }
+        
+        .alert-success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            color: #065f46;
+        }
+        
+        .alert-danger {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            color: #991b1b;
+        }
+        
+        .alert-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: #92400e;
+        }
+        
+        .alert-info {
+            background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
+            color: #155e75;
+        }
+        
+        /* Progress Bars */
+        .progress {
+            height: 0.75rem;
+            border-radius: 1rem;
+            background-color: var(--border-color);
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            border-radius: 1rem;
+            background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        }
+        
+        /* Badges */
+        .badge {
+            border-radius: 0.5rem;
+            font-weight: 500;
+            padding: 0.5rem 0.75rem;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 100%;
+                max-width: 320px;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .content-wrapper {
+                padding: 1rem;
+            }
+            
+            .top-header {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+            
+            .page-title {
+                font-size: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .content-wrapper {
+                padding: 0.75rem;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+            
+            .btn {
+                padding: 0.625rem 1.25rem;
+                font-size: 0.9rem;
+            }
+            
+            .table-responsive {
+                font-size: 0.875rem;
+            }
+        }
+        
+        /* Sidebar Toggle */
+        .sidebar-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+        
+        .sidebar-toggle:hover {
+            background-color: var(--border-color);
+        }
+        
+        @media (max-width: 1024px) {
+            .sidebar-toggle {
+                display: block;
+            }
+        }
+        
+        /* Overlay */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1025;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Loading States */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-color);
+        }
+        
+        /* Dark mode specific styles */
+        [data-theme="dark"] .card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+        }
+        
+        [data-theme="dark"] .sidebar {
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        [data-theme="dark"] .top-header {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Dark mode text color fixes */
+        [data-theme="dark"] .text-muted {
+            color: var(--text-secondary) !important;
+        }
+        
+        [data-theme="dark"] .text-primary {
+            color: var(--primary-color) !important;
+        }
+        
+        [data-theme="dark"] .text-success {
+            color: var(--success-color) !important;
+        }
+        
+        [data-theme="dark"] .text-danger {
+            color: var(--danger-color) !important;
+        }
+        
+        [data-theme="dark"] .text-warning {
+            color: var(--warning-color) !important;
+        }
+        
+        [data-theme="dark"] .text-info {
+            color: var(--info-color) !important;
+        }
+        
+        [data-theme="dark"] .text-dark {
+            color: var(--text-primary) !important;
+        }
+        
+        [data-theme="dark"] .text-light {
+            color: var(--text-secondary) !important;
+        }
+        
+        /* Dark mode background fixes */
+        [data-theme="dark"] .bg-light {
+            background-color: var(--bg-primary) !important;
+        }
+        
+        [data-theme="dark"] .bg-white {
+            background-color: var(--bg-primary) !important;
+        }
+        
+        [data-theme="dark"] .bg-dark {
+            background-color: var(--bg-secondary) !important;
+        }
+        
+        /* Dark mode border fixes */
+        [data-theme="dark"] .border {
+            border-color: var(--border-color) !important;
+        }
+        
+        [data-theme="dark"] .border-light {
+            border-color: var(--border-color) !important;
+        }
+        
+        [data-theme="dark"] .border-dark {
+            border-color: var(--border-color) !important;
+        }
+        
+        /* Dark mode form fixes */
+        [data-theme="dark"] .form-control::placeholder {
+            color: var(--text-secondary) !important;
+        }
+        
+        [data-theme="dark"] .form-select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23cbd5e1' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m1 6 7 7 7-7'/%3e%3c/svg%3e");
+        }
+        
+        /* Dark mode table fixes */
+        [data-theme="dark"] .table {
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+        
+        [data-theme="dark"] .table-hover > tbody > tr:hover > * {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Dark mode alert fixes */
+        [data-theme="dark"] .alert-success {
+            background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+            color: #d1fae5;
+        }
+        
+        [data-theme="dark"] .alert-danger {
+            background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
+            color: #fee2e2;
+        }
+        
+        [data-theme="dark"] .alert-warning {
+            background: linear-gradient(135deg, #92400e 0%, #d97706 100%);
+            color: #fef3c7;
+        }
+        
+        [data-theme="dark"] .alert-info {
+            background: linear-gradient(135deg, #155e75 0%, #0891b2 100%);
+            color: #cffafe;
+        }
+        
+        /* Dark mode badge fixes */
+        [data-theme="dark"] .badge.bg-light {
+            background-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        [data-theme="dark"] .badge.bg-dark {
+            background-color: var(--text-secondary) !important;
+            color: var(--bg-primary) !important;
+        }
+        
+        /* Dark mode button fixes */
+        [data-theme="dark"] .btn-outline-light {
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .btn-outline-light:hover {
+            color: var(--bg-primary);
+            background-color: var(--text-primary);
+            border-color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .btn-outline-dark {
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .btn-outline-dark:hover {
+            color: var(--bg-primary);
+            background-color: var(--text-primary);
+            border-color: var(--text-primary);
+        }
+        
+        /* Dark mode modal fixes */
+        [data-theme="dark"] .modal-content {
+            background-color: var(--bg-primary);
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .modal-header {
+            border-bottom-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .modal-footer {
+            border-top-color: var(--border-color);
+        }
+        
+        /* Dark mode dropdown fixes */
+        [data-theme="dark"] .dropdown-menu {
+            background-color: var(--bg-primary);
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .dropdown-item {
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .dropdown-item:hover {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        /* Dark mode tooltip fixes */
+        [data-theme="dark"] .tooltip-inner {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        /* Dark mode popover fixes */
+        [data-theme="dark"] .popover {
+            background-color: var(--bg-primary);
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .popover-header {
+            background-color: var(--bg-secondary);
+            border-bottom-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .popover-body {
+            color: var(--text-primary);
+        }
+        
+        /* Dark mode list group fixes */
+        [data-theme="dark"] .list-group-item {
+            background-color: var(--bg-primary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .list-group-item-action:hover {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        /* Dark mode nav tabs fixes */
+        [data-theme="dark"] .nav-tabs {
+            border-bottom-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .nav-tabs .nav-link {
+            color: var(--text-secondary);
+            border-color: transparent;
+        }
+        
+        [data-theme="dark"] .nav-tabs .nav-link:hover {
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .nav-tabs .nav-link.active {
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+            border-color: var(--border-color);
+        }
+        
+        /* Dark mode pagination fixes */
+        [data-theme="dark"] .page-link {
+            background-color: var(--bg-primary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .page-link:hover {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        /* Dark mode progress bar fixes */
+        [data-theme="dark"] .progress {
+            background-color: var(--border-color);
+        }
+        
+        /* Dark mode spinner fixes */
+        [data-theme="dark"] .spinner-border {
+            color: var(--primary-color);
+        }
+        
+        /* Dark mode avatar fixes */
+        [data-theme="dark"] .avatar-sm {
+            background-color: var(--primary-color);
+        }
+        
+        /* Dark mode custom scrollbar for dark theme */
+        [data-theme="dark"] ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+        
+        [data-theme="dark"] ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+        }
+        
+        [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-color);
+        }
+        /* Disable hover-to-open for collapsed sidebar */
+        @media (min-width: 1025px) {
+            .sidebar.collapsed:hover { width: 72px !important; }
+            .sidebar.collapsed:hover .sidebar-brand span,
+            .sidebar.collapsed:hover .nav-link span { display: none !important; }
+        }
+    </style>
+</head>
+<body data-is-admin="{{ 'true' if current_user.is_admin() else 'false' }}" data-user-id="{{ current_user.id }}" data-is-dm="{{ 'true' if current_user.is_department_manager() else 'false' }}">
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('dashboard') }}" class="sidebar-brand">
+                <i class="fas fa-chart-line"></i>
+                <span>Within The Company</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-nav">
+            {% if current_user.is_authenticated %}
+            <!-- Ana Sayfa -->
+            <div class="nav-item">
+                <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-home"></i>
+                    <span>Ana Sayfa</span>
+                </a>
+            </div>
+            {% if current_user.is_admin() %}
+            <!-- Admin Paneli -->
+            <div class="nav-item">
+                <a href="{{ url_for('admin_panel') }}" class="nav-link {% if request.endpoint == 'admin_panel' %}active{% endif %}">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Admin Paneli</span>
+                </a>
+            </div>
+            {% endif %}
+            {% if current_user.has_permission('department_panel','view') %}
+            <!-- Departman Paneli -->
+            <div class="nav-item">
+                <a href="{{ url_for('panel_department') }}" class="nav-link {% if request.endpoint == 'panel_department' %}active{% endif %}">
+                    <i class="fas fa-people-group"></i>
+                    <span>Departman Paneli</span>
+                </a>
+            </div>
+            {% endif %}
+            <!-- Görevler -->
+            {% if current_user.has_permission('tasks','view') %}
+            <div class="nav-item">
+                <a href="{{ url_for('tasks_page') }}" class="nav-link {% if request.endpoint == 'tasks_page' %}active{% endif %}">
+                    <i class="fas fa-list-check"></i>
+                    <span>Görevler</span>
+                    <span class="badge bg-danger ms-auto d-none" id="sidebarNotifBadge">0</span>
+                </a>
+            </div>
+            {% endif %}
+            {% if current_user.has_permission('panel_sales','view') %}
+            <!-- Satış Paneli (Temsilci paneli ile birleştirildi) -->
+            <div class="nav-item">
+                <a href="{{ url_for('panel_sales') }}" class="nav-link {% if request.endpoint in ['panel_sales','representative_panel'] %}active{% endif %}">
+                    <i class="fas fa-chart-area"></i>
+                    <span>Satış Paneli</span>
+                </a>
+            </div>
+            {% endif %}
+            {% if current_user.has_permission('panel_purchasing','view') %}
+            <!-- Satın Alma Paneli -->
+            <div class="nav-item">
+                <a href="{{ url_for('panel_purchasing') }}" class="nav-link {% if request.endpoint == 'panel_purchasing' %}active{% endif %}">
+                    <i class="fas fa-warehouse"></i>
+                    <span>Satın Alma Paneli</span>
+                </a>
+            </div>
+            {% endif %}
+            
+            <hr style="border-color: rgba(255,255,255,0.1); margin: 1rem 0;">
+            
+            <!-- Planlama Arşivi -->
+            {% if current_user.has_permission('planning','view') %}
+            <div class="nav-item">
+                <a href="{{ url_for('planning_archive_page') }}" class="nav-link {% if request.endpoint == 'planning_archive_page' %}active{% endif %}">
+                    <i class="fas fa-archive"></i>
+                    <span>Planlama Arşivi</span>
+                </a>
+            </div>
+            {% endif %}
+            {% if current_user.is_admin() or current_user.has_permission('user_management','view') %}
+            <!-- Kullanıcı Yönetimi -->
+            <div class="nav-item">
+                <a href="{{ url_for('user_management') }}" class="nav-link {% if request.endpoint == 'user_management' %}active{% endif %}">
+                    <i class="fas fa-users-cog"></i>
+                    <span>Kullanıcı Yönetimi</span>
+                </a>
+            </div>
+            {% endif %}
+            {% if current_user.is_admin() or current_user.has_permission('department_management','view') %}
+            <!-- Departman Yönetimi -->
+            <div class="nav-item">
+                <a href="{{ url_for('department_management') }}" class="nav-link {% if request.endpoint == 'department_management' %}active{% endif %}">
+                    <i class="fas fa-building"></i>
+                    <span>Departman Yönetimi</span>
+                </a>
+            </div>
+            {% endif %}
+            
+            <hr style="border-color: rgba(255,255,255,0.1); margin: 1rem 0;">
+            
+            <!-- Profil -->
+            <div class="nav-item">
+                <a href="{{ url_for('profile') }}" class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Profil</span>
+                </a>
+            </div>
+            <!-- Çıkış -->
+            <div class="nav-item">
+                <a href="{{ url_for('logout') }}" class="nav-link">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Çıkış Yap</span>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Header -->
+        <div class="top-header">
+            <div class="header-content">
+                <div class="d-flex align-items-center gap-3">
+                    <button class="sidebar-toggle" id="sidebarToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
+                
+                <div class="user-menu">
+                    <div class="position-relative me-2">
+                        <button class="btn btn-light position-relative" id="notifBellBtn" title="Bildirimler" type="button">
+                            <i class="fas fa-bell"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="notifCountBadge">0</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end shadow" id="notifDropdown" style="min-width: 320px; max-height: 380px; overflow-y: auto; display: none; position: absolute; right: 0;">
+                            <div class="dropdown-header d-flex justify-content-between align-items-center">
+                                <span>Bildirimler</span>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-secondary" id="markAllReadBtn">Tümünü Okundu</button>
+                                    <button class="btn btn-sm btn-outline-primary" id="refreshNotifsBtn">Yenile</button>
+                                </div>
+                            </div>
+                            <div id="notifListContainer" class="list-group list-group-flush">
+                                <div class="text-center text-muted py-3">Bildirim yok</div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-light me-2" id="settingsBtn" title="Ayarlar" type="button" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                        <i class="fas fa-gear"></i>
+                    </button>
+                    <button class="theme-toggle" id="themeToggle" title="Gece Modu">
+                        <i class="fas fa-moon" id="themeIcon"></i>
+                    </button>
+                    <div class="user-info">
+                        <div class="user-name">{{ current_user.first_name }} {{ current_user.last_name }}</div>
+                        <div class="user-role">{{ current_user.role.value }}</div>
+                    </div>
+                    <div class="avatar">
+                        <i class="fas fa-user-circle fa-2x text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Content Wrapper -->
+        <div class="content-wrapper">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    
+    <!-- App Toasts -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="appToastContainer" style="z-index: 2000;"></div>
+    
+    <!-- Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-gear me-2"></i>Ayarlar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="list-group">
+                        <a href="{{ url_for('profile') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-user-cog me-2"></i> Profil Ayarları
+                        </a>
+                        <button type="button" class="list-group-item list-group-item-action" id="settingsThemeToggle">
+                            <i class="fas fa-adjust me-2"></i> Tema Değiştir (Gece/Gündüz)
+                        </button>
+                        <a href="{{ url_for('planning_archive_page') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-archive me-2"></i> Planlama Arşivi
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Chart.js (global - bazı sayfalarda grafikler kullanılıyor) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        // Theme Management
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const html = document.documentElement;
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+        
+        // Theme toggle function
+        function toggleTheme() {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+        
+        // Update theme icon
+        function updateThemeIcon(theme) {
+            if (theme === 'dark') {
+                themeIcon.className = 'fas fa-sun';
+                themeToggle.title = 'Gündüz Modu';
+            } else {
+                themeIcon.className = 'fas fa-moon';
+                themeToggle.title = 'Gece Modu';
+            }
+        }
+        
+        // Theme toggle event listener
+        themeToggle.addEventListener('click', toggleTheme);
+        // Settings
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const settingsThemeToggle = document.getElementById('settingsThemeToggle');
+        // Modal open is handled by data-bs-toggle on the button
+        settingsThemeToggle?.addEventListener('click', ()=>{
+            toggleTheme();
+            // Blur focused element before hiding modal to avoid aria-hidden focus warning
+            settingsThemeToggle.blur();
+            setTimeout(()=>{
+                const inst = bootstrap.Modal.getInstance(settingsModal);
+                inst?.hide();
+                settingsBtn?.focus();
+            }, 0);
+        });
+        
+        // Sidebar Toggle (Departman Yönetimi sayfasında görünür, admin sayfasında gizli tutacağız)
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const isDesktop = window.matchMedia('(min-width: 1025px)').matches;
+            if (isDesktop) {
+                sidebar.classList.toggle('collapsed');
+            } else {
+                sidebar.classList.toggle('show');
+                overlay.classList.toggle('show');
+            }
+        });
+
+        // Notifications UI
+        const notifBellBtn = document.getElementById('notifBellBtn');
+        const notifDropdown = document.getElementById('notifDropdown');
+        // Global toast helper
+        function showToast(message, type = 'success'){
+            try {
+                const container = document.getElementById('appToastContainer');
+                if (!container){ alert(message); return; }
+                const toastEl = document.createElement('div');
+                toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+                toastEl.setAttribute('role','alert');
+                toastEl.setAttribute('aria-live','assertive');
+                toastEl.setAttribute('aria-atomic','true');
+                toastEl.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Kapat"></button>
+                    </div>`;
+                container.appendChild(toastEl);
+                const t = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3000 });
+                t.show();
+                toastEl.addEventListener('hidden.bs.toast', ()=> toastEl.remove());
+            } catch { try { alert(message); } catch(e){} }
+        }
+
+        // Timezone-aware TR format helpers (force Europe/Istanbul regardless of client OS)
+        function __parseAssumingUTCIfNoTZ(value){
+            if (!value) return null;
+            // If it's a pure date (YYYY-MM-DD), build safe Date at noon UTC to avoid day shift
+            if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)){
+                return new Date(value + 'T12:00:00Z');
+            }
+            // If string has no timezone info, assume UTC by appending Z
+            if (typeof value === 'string' && !(/[zZ]|[+-]\d{2}:?\d{2}/.test(value))){
+                const norm = value.replace(' ', 'T') + 'Z';
+                return new Date(norm);
+            }
+            return new Date(value);
+        }
+        function formatTRDate(isoString){
+            try {
+                if (!isoString) return '-';
+                const d = __parseAssumingUTCIfNoTZ(isoString);
+                return new Intl.DateTimeFormat('tr-TR', { timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+            } catch { return '-'; }
+        }
+        function formatTRDateTime(isoString){
+            try {
+                if (!isoString) return '-';
+                const d = __parseAssumingUTCIfNoTZ(isoString);
+                const date = new Intl.DateTimeFormat('tr-TR', { timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+                const time = new Intl.DateTimeFormat('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' }).format(d);
+                return `${date} ${time}`;
+            } catch { return '-'; }
+        }
+        const notifBadge = document.getElementById('notifCountBadge');
+        const notifListContainer = document.getElementById('notifListContainer');
+        const refreshNotifsBtn = document.getElementById('refreshNotifsBtn');
+        const markAllReadBtn = document.getElementById('markAllReadBtn');
+
+        async function fetchUnreadCount(){
+            try {
+                const r = await fetch('/api/notifications/unread-count');
+                const d = await r.json();
+                const c = d.count || 0;
+                if (c > 0) {
+                    notifBadge.classList.remove('d-none');
+                    notifBadge.textContent = c;
+                } else {
+                    notifBadge.classList.add('d-none');
+                }
+                const sidebarBadge = document.getElementById('sidebarNotifBadge');
+                if (sidebarBadge){
+                    if (c > 0) {
+                        sidebarBadge.classList.remove('d-none');
+                        sidebarBadge.textContent = c;
+                    } else {
+                        sidebarBadge.classList.add('d-none');
+                    }
+                }
+            } catch {}
+        }
+
+        async function fetchNotifications(){
+            try {
+                const r = await fetch('/api/notifications');
+                const d = await r.json();
+                const list = d.notifications || [];
+                if (!list.length){
+                    notifListContainer.innerHTML = '<div class="text-center text-muted py-3">Bildirim yok</div>';
+                    return;
+                }
+                notifListContainer.innerHTML = '';
+                list.forEach(n => {
+                    const a = document.createElement('a');
+                    a.href = '#';
+                    a.className = 'list-group-item list-group-item-action';
+                    a.innerHTML = `
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">${n.title || 'Bildirim'}</h6>
+                            <small class="text-muted">${formatTRDateTime(n.created_at)}</small>
+                        </div>
+                        <p class="mb-1">${n.message || ''}</p>
+                        ${n.is_read ? '' : '<span class="badge bg-danger">Yeni</span>'}
+                    `;
+                    a.addEventListener('click', async (e)=>{
+                        e.preventDefault();
+                        try {
+                            await fetch(`/api/notifications/${n.id}/read`, { method: 'POST' });
+                        } catch {}
+                        // Navigate
+                        if (n.url) {
+                            window.location.href = n.url;
+                        } else if (n.entity_type === 'task') {
+                            window.location.href = '/tasks';
+                        }
+                    });
+                    notifListContainer.appendChild(a);
+                });
+                // Dropdown açılınca sayacı sıfırla (görsel rozet)
+                notifBadge.classList.add('d-none');
+                notifBadge.textContent = '0';
+            } catch {
+                notifListContainer.innerHTML = '<div class="text-center text-danger py-3">Bildirimler yüklenemedi</div>';
+            }
+        }
+
+        notifBellBtn?.addEventListener('click', async ()=>{
+            if (notifDropdown.style.display === 'none'){
+                await fetchNotifications();
+                notifDropdown.style.display = 'block';
+            } else {
+                notifDropdown.style.display = 'none';
+            }
+        });
+        refreshNotifsBtn?.addEventListener('click', async ()=>{
+            await fetchNotifications();
+            await fetchUnreadCount();
+        });
+        markAllReadBtn?.addEventListener('click', async ()=>{
+            try {
+                // Basit yaklaşım: listelenen bildirimlerin hepsini tek tek okundu işaretle
+                const links = notifListContainer?.querySelectorAll('.list-group-item') || [];
+                const ids = [];
+                links.forEach(a=>{
+                    const txt = a.querySelector('h6')?.textContent || '';
+                });
+                // API tek tek id beklediği için önce listeyi çekelim
+                const r = await fetch('/api/notifications');
+                const d = await r.json();
+                const list = d.notifications || [];
+                await Promise.all(list.map(n => fetch(`/api/notifications/${n.id}/read`, { method: 'POST' }).catch(()=>{})));
+                await fetchNotifications();
+                await fetchUnreadCount();
+                // Rozeti gizle
+                notifBadge.classList.add('d-none');
+                notifBadge.textContent = '0';
+                showToast('Tüm bildirimler okundu', 'success');
+            } catch { showToast('Bildirimler işaretlenemedi', 'danger'); }
+        });
+        document.addEventListener('click', (e)=>{
+            if (!notifDropdown.contains(e.target) && e.target !== notifBellBtn){
+                notifDropdown.style.display = 'none';
+            }
+        });
+        // Initial load and polling
+        fetchUnreadCount();
+        setInterval(fetchUnreadCount, 30000);
+        
+        // Close sidebar when clicking overlay
+        document.getElementById('sidebarOverlay').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            sidebar.classList.remove('show');
+            overlay.classList.remove('show');
+        });
+
+        // Desktop: auto-expand on hover when collapsed
+        const sidebarEl = document.getElementById('sidebar');
+        const isDesktop = () => window.matchMedia('(min-width: 1025px)').matches;
+        sidebarEl.addEventListener('mouseenter', function(){
+            if (isDesktop() && sidebarEl.classList.contains('collapsed')) {
+                sidebarEl.classList.add('hover');
+            }
+        });
+        sidebarEl.addEventListener('mouseleave', function(){
+            if (isDesktop() && sidebarEl.classList.contains('collapsed')) {
+                sidebarEl.classList.remove('hover');
+            }
+        });
+        
+        // Auto-hide alerts
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                alert.style.opacity = '0';
+                setTimeout(function() {
+                    alert.remove();
+                }, 300);
+            });
+        }, 5000);
+        
+        // Loading states for buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn')) {
+                const btn = e.target;
+                const originalText = btn.innerHTML;
+                
+                btn.classList.add('loading');
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Yükleniyor...';
+                btn.disabled = true;
+                
+                setTimeout(function() {
+                    btn.classList.remove('loading');
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            }
+        });
+        
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const href = this.getAttribute('href');
+                if (href && href !== '#') {
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                }
+            });
+        });
+        
+        // Global modal focus management to avoid aria-hidden warnings
+        document.addEventListener('show.bs.modal', function(e){
+            const modal = e.target;
+            modal.__opener = document.activeElement;
+        });
+        document.addEventListener('hide.bs.modal', function(){
+            try { document.activeElement && document.activeElement.blur(); } catch(e){}
+        });
+        document.addEventListener('hidden.bs.modal', function(e){
+            const modal = e.target;
+            if (modal && modal.__opener) {
+                try { modal.__opener.focus(); } catch(e){}
+                modal.__opener = null;
+            }
+        });
+        
+        // First desktop notifications poll is scheduled after helpers are defined (see later script)
+        
+        // Form validation
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const requiredFields = form.querySelectorAll('[required]');
+                let isValid = true;
+                
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        field.classList.add('is-invalid');
+                        isValid = false;
+                    } else {
+                        field.classList.remove('is-invalid');
+                    }
+                });
+                
+                if (!isValid) {
+                    e.preventDefault();
+                    alert('Lütfen tüm gerekli alanları doldurun.');
+                }
+            });
+        });
+        
+        // Add fade-in animation to cards
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = (index * 0.1) + 's';
+                card.classList.add('fade-in');
+            });
+        });
+
+        // Bootstrap stacked modals z-index fix
+        document.addEventListener('shown.bs.modal', function (e) {
+            const openModals = document.querySelectorAll('.modal.show');
+            const zIndex = 1050 + (10 * openModals.length);
+            e.target.style.zIndex = zIndex;
+            const backdrops = document.querySelectorAll('.modal-backdrop:not(.modal-stack)');
+            backdrops.forEach(bd => {
+                bd.style.zIndex = zIndex - 1;
+                bd.classList.add('modal-stack');
+            });
+        });
+        document.addEventListener('hide.bs.modal', function () {
+            // Clean extra backdrops if no modal remains
+            setTimeout(() => {
+                if (document.querySelectorAll('.modal.show').length === 0) {
+                    document.querySelectorAll('.modal-backdrop.modal-stack').forEach(bd => bd.remove());
+                }
+            }, 200);
+        });
+    </script>
+    <script>
+        // Desktop Notifications helpers
+        let __shownDesktopNotifIds = new Set();
+        let __shownDueTaskKeys = new Set();
+        try {
+            __shownDesktopNotifIds = new Set(JSON.parse(localStorage.getItem('shownDesktopNotifIds') || '[]'));
+            __shownDueTaskKeys = new Set(JSON.parse(localStorage.getItem('shownDueTaskKeys') || '[]'));
+        } catch {}
+
+        function persistShownSets(){
+            try {
+                localStorage.setItem('shownDesktopNotifIds', JSON.stringify(Array.from(__shownDesktopNotifIds)));
+                localStorage.setItem('shownDueTaskKeys', JSON.stringify(Array.from(__shownDueTaskKeys)));
+            } catch {}
+        }
+
+        function setupDesktopNotifications(){
+            if (!('Notification' in window)) return;
+            try {
+                if (Notification.permission === 'default') {
+                    Notification.requestPermission().then(()=>{
+                        if (Notification.permission === 'granted') pollDesktopNotifications();
+                    });
+                }
+            } catch {}
+            // Poll every 5 minutes
+            setInterval(pollDesktopNotifications, 300000);
+        }
+
+        function showDesktopNotification(title, body, url){
+            try {
+                if (!('Notification' in window)) { if (typeof showToast==='function') showToast(body || title, 'info'); return; }
+                if (Notification.permission !== 'granted') { if (typeof showToast==='function') showToast(body || title, 'info'); return; }
+                const n = new Notification(title || 'Bildirim', { body: body || '', icon: '/favicon.ico' });
+                if (url){
+                    n.onclick = function(){ try { window.focus(); window.location.href = url; } catch(e){} };
+                }
+            } catch { if (typeof showToast==='function') showToast(body || title, 'info'); }
+        }
+
+        async function pollDesktopNotifications(){
+            try {
+                // Unread notifications to desktop
+                const nr = await fetch('/api/notifications?unread=true');
+                const nd = await nr.json();
+                const list = nd.notifications || [];
+                list.forEach(n => {
+                    const nid = String(n.id);
+                    if (!__shownDesktopNotifIds.has(nid)){
+                        showDesktopNotification(n.title || 'Bildirim', n.message || '', n.url || '/');
+                        __shownDesktopNotifIds.add(nid);
+                    }
+                });
+                // Due-soon tasks
+                const tr = await fetch('/api/tasks/due-soon?days=3');
+                const td = await tr.json();
+                const tasks = td.tasks || [];
+                const today = new Date();
+                tasks.forEach(t => {
+                    const key = `${t.id}_${t.due_date || ''}`;
+                    if (__shownDueTaskKeys.has(key)) return;
+                    // Stronger emphasis for due today/tomorrow
+                    let whenLabel = '';
+                    try {
+                        if (t.due_date){
+                            const due = new Date(t.due_date + 'T12:00:00');
+                            const diffDays = Math.floor((due - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
+                            if (diffDays <= 0) whenLabel = ' (Bugün)';
+                            else if (diffDays === 1) whenLabel = ' (Yarın)';
+                            else whenLabel = '';
+                        }
+                    } catch {}
+                    showDesktopNotification('Görev bitişi yaklaşıyor', `${t.title || 'Görev'} • Bitiş: ${t.due_date || '-'}${whenLabel}`, '/tasks');
+                    __shownDueTaskKeys.add(key);
+                });
+                persistShownSets();
+            } catch {}
+        }
+        // Initialize desktop notifications after helpers exist
+        document.addEventListener('DOMContentLoaded', function(){
+            try { setupDesktopNotifications(); } catch(e){}
+            // Kick off first poll shortly after load
+            setTimeout(()=>{ try { pollDesktopNotifications(); } catch(e){} }, 2000);
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html> 

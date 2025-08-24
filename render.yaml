@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: sales-dashboard
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.16
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+    healthCheckPath: /
+    autoDeploy: true
+
+databases:
+  - name: sales-dashboard-db
+    databaseName: sales_dashboard
+    user: sales_dashboard_user
+    plan: free

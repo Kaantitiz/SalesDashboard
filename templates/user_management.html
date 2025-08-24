@@ -1,0 +1,744 @@
+{% extends "base.html" %}
+
+{% block title %}Kullanıcı Yönetimi - Satış Dashboard{% endblock %}
+{% block page_title %}Kullanıcı Yönetimi{% endblock %}
+
+{% block content %}
+<!-- Kullanıcı Yönetimi Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-users-cog me-2"></i>
+                    Kullanıcı Yönetimi
+                </h5>
+                <button class="btn btn-primary" onclick="openCreateUserModal()">
+                    <i class="fas fa-plus me-1"></i>
+                    Yeni Kullanıcı Ekle
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="roleFilter" class="form-label">Rol Filtresi</label>
+                        <select class="form-select" id="roleFilter" onchange="filterUsers()">
+                            <option value="">Tüm Roller</option>
+                            <option value="ADMIN">Admin</option>
+                            <option value="DEPARTMENT_MANAGER">Departman Yöneticisi</option>
+                            <option value="USER">Kullanıcı</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="statusFilter" class="form-label">Durum Filtresi</label>
+                        <select class="form-select" id="statusFilter" onchange="filterUsers()">
+                            <option value="">Tüm Durumlar</option>
+                            <option value="true">Aktif</option>
+                            <option value="false">Pasif</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="searchFilter" class="form-label">Arama</label>
+                        <input type="text" class="form-control" id="searchFilter" placeholder="Kullanıcı adı, ad, soyad veya email ara..." onkeyup="filterUsers()">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Departman Kartları -->
+<div class="row" id="departmentCardsRow"></div>
+
+<!-- Kullanıcı Oluşturma Modal -->
+<div class="modal fade" id="createUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Kullanıcı Oluştur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createUserForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="createUsername" class="form-label">Kullanıcı Adı *</label>
+                            <input type="text" class="form-control" id="createUsername" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="createPassword" class="form-label">Şifre *</label>
+                            <input type="password" class="form-control" id="createPassword" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="createFirstName" class="form-label">Ad *</label>
+                            <input type="text" class="form-control" id="createFirstName" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="createLastName" class="form-label">Soyad *</label>
+                            <input type="text" class="form-control" id="createLastName" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="createEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="createEmail">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="createRole" class="form-label">Rol *</label>
+                            <select class="form-select" id="createRole" required onchange="toggleRepresentativeCode()">
+                                <option value="">Rol seçin...</option>
+                                <option value="ADMIN">Admin</option>
+                                <option value="DEPARTMENT_MANAGER">Departman Yöneticisi</option>
+                                <option value="USER">Kullanıcı</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="createDepartment" class="form-label">Departman</label>
+                            <select class="form-select" id="createDepartment">
+                                <option value="">Seçiniz</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3" id="representativeCodeDiv" style="display: none;">
+                            <label for="createRepresentativeCode" class="form-label">Temsilci Kodu</label>
+                            <input type="text" class="form-control" id="createRepresentativeCode">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="createIsActive" class="form-label">Durum</label>
+                            <select class="form-select" id="createIsActive">
+                                <option value="true">Aktif</option>
+                                <option value="false">Pasif</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="createUser()">Oluştur</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kullanıcı Düzenleme Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Kullanıcı Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editUsername" class="form-label">Kullanıcı Adı *</label>
+                            <input type="text" class="form-control" id="editUsername" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editFirstName" class="form-label">Ad *</label>
+                            <input type="text" class="form-control" id="editFirstName" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editLastName" class="form-label">Soyad *</label>
+                            <input type="text" class="form-control" id="editLastName" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="editEmail">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editRole" class="form-label">Rol *</label>
+                            <select class="form-select" id="editRole" required onchange="toggleEditRepresentativeCode()">
+                                <option value="">Rol seçin...</option>
+                                <option value="ADMIN">Admin</option>
+                                <option value="DEPARTMENT_MANAGER">Departman Yöneticisi</option>
+                                <option value="USER">Kullanıcı</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editIsActive" class="form-label">Durum</label>
+                            <select class="form-select" id="editIsActive">
+                                <option value="true">Aktif</option>
+                                <option value="false">Pasif</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3" id="editRepresentativeCodeDiv" style="display: none;">
+                            <label for="editRepresentativeCode" class="form-label">Temsilci Kodu</label>
+                            <input type="text" class="form-control" id="editRepresentativeCode">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editPassword" class="form-label">Yeni Şifre (Boş bırakılırsa değişmez)</label>
+                            <input type="password" class="form-control" id="editPassword">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="updateUser()">Güncelle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Şifre Sıfırlama Modal -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Şifre Sıfırla</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="resetPasswordForm">
+                    <input type="hidden" id="resetPasswordUserId">
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">Yeni Şifre *</label>
+                        <input type="password" class="form-control" id="newPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Şifre Tekrar *</label>
+                        <input type="password" class="form-control" id="confirmPassword" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-warning" onclick="resetPassword()">Şifre Sıfırla</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables
+let allUsers = [];
+let filteredUsers = [];
+
+// Load all users
+async function loadUsers() {
+    console.log('🔄 Loading users by departments...');
+    try {
+        const [usersRes, deptRes] = await Promise.all([
+            fetch('/api/users'),
+            fetch('/auth/departments')
+        ]);
+        const usersData = await usersRes.json();
+        const deptData = await deptRes.json();
+        if (!usersData.success) throw new Error(usersData.error || 'users');
+        allUsers = usersData.users;
+        filteredUsers = [...allUsers];
+        renderDepartmentCards(deptData.departments || []);
+    } catch (error) {
+        console.error('❌ Users load error:', error);
+        showAlert('Kullanıcı listesi yüklenirken hata oluştu', 'danger');
+    }
+}
+
+function renderDepartmentCards(departments){
+    const row = document.getElementById('departmentCardsRow');
+    row.innerHTML = '';
+    departments.forEach(dep => {
+        const users = allUsers.filter(u => u.department_id === dep.id);
+        const card = document.createElement('div');
+        card.className = 'col-lg-4 col-md-6 mb-3';
+        card.innerHTML = `
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="fas fa-building me-2"></i>${dep.name}</h6>
+                    <button class="btn btn-sm btn-outline-primary" onclick="openDepartmentUsersModal(${dep.id}, '${dep.name.replace(/'/g, "\'")}', '${(dep.default_role_title || '').replace(/'/g, "\'")}')">Görüntüle</button>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        ${users.length > 0 ? users.slice(0,6).map(u => `<span class=\"badge bg-light text-dark\">${u.username}</span>`).join('') : `<span class=\"text-muted\">${users.length} kullanıcı</span>`}
+                    </div>
+                </div>
+            </div>
+        `;
+        row.appendChild(card);
+    });
+}
+
+async function openDepartmentUsersModal(deptId, deptName, deptDefaultRoleTitle){
+    try {
+        const res = await fetch(`/auth/departments/${deptId}/users`);
+        const data = await res.json();
+        if (!data.users) throw new Error('no users');
+        const defaultRole = deptDefaultRoleTitle || '';
+        const modalId = 'deptUsersModal';
+        let modalEl = document.getElementById(modalId);
+        if (!modalEl) {
+            modalEl = document.createElement('div');
+            modalEl.id = modalId;
+            modalEl.className = 'modal fade';
+            modalEl.tabIndex = -1;
+            modalEl.innerHTML = `
+                <div class="modal-dialog modal-xl" style="max-width: 1200px;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">${deptName} - Kullanıcılar</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Kullanıcı Adı</th>
+                                            <th>Ad Soyad</th>
+                                            <th>Email</th>
+                                            <th>Rol</th>
+                                            <th>Unvan</th>
+                                            <th>Temsilci Kodu</th>
+                                            <th>Durum</th>
+                                            <th>Son Giriş</th>
+                                            <th>Kayıt Tarihi</th>
+                                            <th style="width: 160px;">İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="deptUsersTbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(modalEl);
+        }
+        const tbody = modalEl.querySelector('#deptUsersTbody');
+        tbody.innerHTML = '';
+        data.users.forEach(user => {
+            const lastLogin = user.last_login ? formatTRDateTime(user.last_login) : 'Hiç giriş yapmamış';
+            const createdAt = user.created_at ? formatTRDate(user.created_at) : 'Bilinmiyor';
+            const statusBadge = user.is_active ? '<span class="badge bg-success">Aktif</span>' : '<span class="badge bg-danger">Pasif</span>';
+            const roleBadge = getRoleBadge(user.role);
+            const unvanText = user.department_role || defaultRole || '-';
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${user.username}</strong></td>
+                <td>${user.full_name}</td>
+                <td>${user.email || '-'}</td>
+                <td>${roleBadge}</td>
+                <td>${unvanText}</td>
+                <td>${user.representative_code || '-'}</td>
+                <td>${statusBadge}</td>
+                <td>${lastLogin}</td>
+                <td>${createdAt}</td>
+                <td>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editUser(${user.id})"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="resetUserPassword(${user.id})"><i class="fas fa-key"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.id})"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        new bootstrap.Modal(modalEl).show();
+    } catch (e) {
+        showAlert('Departman kullanıcıları yüklenemedi', 'danger');
+    }
+}
+
+// Update users table
+function updateUsersTable() {
+    console.log('🔄 Updating users table with', filteredUsers.length, 'users');
+    
+    const tbody = document.getElementById('usersTableBody');
+    tbody.innerHTML = '';
+    
+    if (filteredUsers.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center py-3">
+                    <i class="fas fa-info-circle text-muted me-2"></i>
+                    Kullanıcı bulunamadı
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    filteredUsers.forEach(user => {
+        const lastLogin = user.last_login ? formatTRDateTime(user.last_login) : 'Hiç giriş yapmamış';
+        const createdAt = user.created_at ? formatTRDate(user.created_at) : 'Bilinmiyor';
+        const statusBadge = user.is_active ? 
+            '<span class="badge bg-success">Aktif</span>' : 
+            '<span class="badge bg-danger">Pasif</span>';
+        
+        const roleBadge = getRoleBadge(user.role);
+        
+        const row = `
+            <tr>
+                <td><strong>${user.username}</strong></td>
+                <td>${user.first_name} ${user.last_name}</td>
+                <td>${user.email || '-'}</td>
+                <td>${roleBadge}</td>
+                <td>${(user.department_role || user.department_default_role_title) || '-'}</td>
+                <td>${user.representative_code || '-'}</td>
+                <td>${statusBadge}</td>
+                <td>${lastLogin}</td>
+                <td>${createdAt}</td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editUser(${user.id})" title="Düzenle">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="resetUserPassword(${user.id})" title="Şifre Sıfırla">
+                            <i class="fas fa-key"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.id})" title="Sil">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+        tbody.innerHTML += row;
+    });
+    
+    console.log('✅ Users table updated successfully');
+}
+
+// Get role badge
+function getRoleBadge(role) {
+    switch(role) {
+        case 'admin':
+            return '<span class="badge bg-danger">Admin</span>';
+        case 'department_manager':
+            return '<span class="badge bg-primary">Departman Yöneticisi</span>';
+        case 'user':
+            return '<span class="badge bg-secondary">Kullanıcı</span>';
+        default:
+            return '<span class="badge bg-light text-dark">Bilinmiyor</span>';
+    }
+}
+
+// Filter users
+function filterUsers() {
+    const roleFilter = document.getElementById('roleFilter').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+    
+    console.log('🔄 Filtering users:', { roleFilter, statusFilter, searchFilter });
+    
+    filteredUsers = allUsers.filter(user => {
+        // Role filter
+        if (roleFilter) {
+            const roleMapping = {
+                'ADMIN': 'admin',
+                'DEPARTMENT_MANAGER': 'department_manager',
+                'USER': 'user'
+            };
+            if (user.role !== roleMapping[roleFilter]) return false;
+        }
+        
+        // Status filter
+        if (statusFilter && user.is_active.toString() !== statusFilter) return false;
+        
+        // Search filter
+        if (searchFilter) {
+            const searchText = `${user.username} ${user.first_name} ${user.last_name} ${user.email || ''}`.toLowerCase();
+            if (!searchText.includes(searchFilter)) return false;
+        }
+        
+        return true;
+    });
+    
+    updateUsersTable();
+}
+
+// Open create user modal
+function openCreateUserModal() {
+    document.getElementById('createUserForm').reset();
+    document.getElementById('representativeCodeDiv').style.display = 'none';
+    const modal = new bootstrap.Modal(document.getElementById('createUserModal'));
+    modal.show();
+}
+
+// Toggle representative code field
+function toggleRepresentativeCode() {
+    const role = document.getElementById('createRole').value;
+    const div = document.getElementById('representativeCodeDiv');
+    div.style.display = role === 'REPRESENTATIVE' ? 'block' : 'none';
+}
+
+// Toggle edit representative code field
+function toggleEditRepresentativeCode() {
+    const role = document.getElementById('editRole').value;
+    const div = document.getElementById('editRepresentativeCodeDiv');
+    div.style.display = role === 'REPRESENTATIVE' ? 'block' : 'none';
+}
+
+// Create user
+function createUser() {
+    console.log('🔄 Creating user...');
+    
+    const formData = {
+        username: document.getElementById('createUsername').value,
+        password: document.getElementById('createPassword').value,
+        first_name: document.getElementById('createFirstName').value,
+        last_name: document.getElementById('createLastName').value,
+        email: document.getElementById('createEmail').value,
+        role: document.getElementById('createRole').value,
+        representative_code: document.getElementById('createRepresentativeCode').value,
+        is_active: document.getElementById('createIsActive').value === 'true',
+        department_id: document.getElementById('createDepartment').value || null
+    };
+    
+    console.log('Form data:', formData);
+    
+    fetch('/api/users', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Create user response:', data);
+        if (data.success) {
+            showAlert(data.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('createUserModal')).hide();
+            loadUsers();
+        } else {
+            showAlert(data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error creating user:', error);
+        showAlert('Kullanıcı oluşturulurken hata oluştu', 'danger');
+    });
+}
+
+// Edit user
+function editUser(userId) {
+    console.log('🔄 Editing user:', userId);
+    
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) {
+        console.error('❌ User not found:', userId);
+        return;
+    }
+    
+    document.getElementById('editUserId').value = user.id;
+    document.getElementById('editUsername').value = user.username;
+    document.getElementById('editFirstName').value = user.first_name;
+    document.getElementById('editLastName').value = user.last_name;
+    document.getElementById('editEmail').value = user.email || '';
+    // Role değerini büyük harfe çevir
+    const roleMapping = {
+        'admin': 'ADMIN',
+        'department_manager': 'DEPARTMENT_MANAGER',
+        'user': 'USER'
+    };
+    document.getElementById('editRole').value = roleMapping[user.role] || user.role;
+    document.getElementById('editRepresentativeCode').value = user.representative_code || '';
+    document.getElementById('editIsActive').value = user.is_active.toString();
+    document.getElementById('editPassword').value = '';
+    
+    toggleEditRepresentativeCode();
+    
+    const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+    modal.show();
+}
+
+// Update user
+function updateUser() {
+    console.log('🔄 Updating user...');
+    
+    const userId = document.getElementById('editUserId').value;
+    const formData = {
+        username: document.getElementById('editUsername').value,
+        first_name: document.getElementById('editFirstName').value,
+        last_name: document.getElementById('editLastName').value,
+        email: document.getElementById('editEmail').value,
+        role: document.getElementById('editRole').value,
+        representative_code: document.getElementById('editRepresentativeCode').value,
+        is_active: document.getElementById('editIsActive').value === 'true'
+    };
+    
+    const password = document.getElementById('editPassword').value;
+    if (password) {
+        formData.password = password;
+    }
+    
+    console.log('Update form data:', formData);
+    
+    fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Update user response:', data);
+        if (data.success) {
+            showAlert(data.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+            loadUsers();
+        } else {
+            showAlert(data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error updating user:', error);
+        showAlert('Kullanıcı güncellenirken hata oluştu', 'danger');
+    });
+}
+
+// Reset user password
+function resetUserPassword(userId) {
+    console.log('🔄 Resetting password for user:', userId);
+    
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) {
+        console.error('❌ User not found:', userId);
+        return;
+    }
+    
+    document.getElementById('resetPasswordUserId').value = user.id;
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('resetPasswordModal'));
+    modal.show();
+}
+
+// Reset password
+function resetPassword() {
+    console.log('🔄 Resetting password...');
+    
+    const userId = document.getElementById('resetPasswordUserId').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        showAlert('Şifreler eşleşmiyor', 'danger');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showAlert('Şifre en az 6 karakter olmalıdır', 'danger');
+        return;
+    }
+    
+    fetch(`/api/users/${userId}/reset-password`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ new_password: newPassword })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Reset password response:', data);
+        if (data.success) {
+            showAlert(data.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal')).hide();
+        } else {
+            showAlert(data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error resetting password:', error);
+        showAlert('Şifre sıfırlanırken hata oluştu', 'danger');
+    });
+}
+
+// Delete user
+function deleteUser(userId) {
+    console.log('🔄 Deleting user:', userId);
+    
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) {
+        console.error('❌ User not found:', userId);
+        return;
+    }
+    
+    if (!confirm(`"${user.username}" kullanıcısını silmek istediğinizden emin misiniz?`)) {
+        return;
+    }
+    
+    fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Delete user response:', data);
+        if (data.success) {
+            showAlert(data.message, 'success');
+            loadUsers();
+        } else {
+            showAlert(data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error deleting user:', error);
+        showAlert('Kullanıcı silinirken hata oluştu', 'danger');
+    });
+}
+
+// Show alert
+function showAlert(message, type) {
+    console.log('showAlert called:', message, type);
+    
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const contentWrapper = document.querySelector('.content-wrapper');
+    if (contentWrapper) {
+        contentWrapper.insertBefore(alertDiv, contentWrapper.firstChild);
+    } else {
+        document.body.insertBefore(alertDiv, document.body.firstChild);
+    }
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔄 User management page initialized');
+    loadUsers();
+    // Load departments for create modal
+    fetch('/auth/departments')
+        .then(r => r.json())
+        .then(d => {
+            const sel = document.getElementById('createDepartment');
+            if (!sel || !d.departments) return;
+            sel.innerHTML = '<option value="">Seçiniz</option>';
+            d.departments.forEach(dep => {
+                const opt = document.createElement('option');
+                opt.value = dep.id;
+                opt.textContent = dep.name;
+                sel.appendChild(opt);
+            });
+        })
+        .catch(()=>{});
+    console.log('✅ User management page initialization completed');
+});
+</script>
+{% endblock %}

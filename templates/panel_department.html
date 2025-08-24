@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Departman Paneli{% endblock %}
+{% block page_title %}Departman Paneli{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row g-3" id="dmUsersRow">
+    <!-- Kullanıcı kartları JavaScript ile yüklenecek -->
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function percent(n){ try{ return (n||0).toFixed(0) + '%'; }catch(e){ return '0%'; } }
+function money(n){ try{ return '₺'+(n||0).toLocaleString('tr-TR'); }catch(e){ return '₺'+(n||0); } }
+function roleLabel(user){
+  const r = (user.role||'').toLowerCase();
+  if (r==='admin') return 'Yönetici';
+  if (r==='department_manager') return 'Departman Yöneticisi';
+  if (r==='representative') return 'Temsilci';
+  if (r==='user') return 'Kullanıcı';
+  return 'Kullanıcı';
+}
+
+async function loadDepartmentUsers(){
+  const row = document.getElementById('dmUsersRow');
+  row.innerHTML = '<div class="col-12 text-center text-muted py-4">Yükleniyor...</div>';
+  try {
+    // Kapsamdaki kullanıcıların raporu ve görevler (DM erişebilir)
+    const [repRes, tasksRes] = await Promise.all([
+      fetch('/api/reports/representatives'),
+      fetch('/api/tasks')
+    ]);
+    const repData = await repRes.json();
+    const tasksData = await tasksRes.json();
+    const representatives = repData.representatives || [];
+    const tasks = tasksData.tasks||[];
+
+    // Kullanıcıya göre görev metrikleri
+    const tasksByUser = new Map();
+    tasks.forEach(t=>{
+      const uid = t.assigned_to_id || t.created_by_id;
+      if (!uid) return;
+      if (!tasksByUser.has(uid)) tasksByUser.set(uid, []);
+      tasksByUser.get(uid).push(t);
+    });
+
+    const isPurchasing = '{{ current_user.department.name if current_user.department else "" }}' === 'Satın Alma Departmanı';
+    const sumNet = representatives.reduce((a,r)=> a + (r.net_sales||0), 0) || 0;
+
+    row.innerHTML = representatives.map(rep=>{
+      const uid = rep.representative_id;
+      const name = rep.representative_name || '';
+      const utasks = tasksByUser.get(uid)||[];
+      const completed = utasks.filter(t=> (t.status||'').toLowerCase()==='completed');
+      const total = utasks.length;
+      const overdue = utasks.filter(t=> t.due_date && new Date(t.due_date) < new Date() && (t.status||'').toLowerCase()!=='completed');
+      const compRate = total? Math.round(completed.length/total*100) : 0;
+      let avgDays='-';
+      if (completed.length){
+        const sumDays = completed.reduce((a,t)=>{
+          const c = t.created_at? new Date(t.created_at) : null;
+          const up = t.updated_at? new Date(t.updated_at) : null;
+          if (!c || !up) return a;
+          return a + Math.max(0,(up-c)/(1000*60*60*24));
+        },0);
+        avgDays = (sumDays/completed.length).toFixed(1) + ' gün';
+      }
+      const salesBlock = `
+        <div class="small text-muted">Hedef Tutturumu</div>
+        <div class="fw-semibold">${percent(rep.target_completion||0)}</div>
+        <div class="small text-muted mt-2">Toplam Net Satış</div>
+        <div class="fw-semibold">${money(rep.net_sales||0)}</div>
+        <div class="small text-muted mt-2">Ciro Katkı Oranı</div>
+        <div class="fw-semibold">${percent(sumNet? (rep.net_sales||0)/sumNet*100 : 0)}</div>
+      `;
+      const purchasingBlock = `
+        <div class="small text-muted">Tamamlama Yüzdesi</div>
+        <div class="fw-semibold">${percent(compRate)}</div>
+        <div class="small text-muted mt-2">Ortalama Tamamlama Süresi</div>
+        <div class="fw-semibold">${avgDays}</div>
+      `;
+      const detailsUrl = '/user?view_user_id=' + uid + '&clean=1';
+      return `
+      <div class="col-lg-3 col-md-4 col-sm-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-2">
+              <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                <i class="fas fa-user"></i>
+              </div>
+              <div class="ms-2">
+                <div class="fw-bold">${name}</div>
+              </div>
+            </div>
+            <div class="mb-2">
+              ${isPurchasing ? purchasingBlock : salesBlock}
+            </div>
+            <div class="d-flex justify-content-between small text-muted">
+              <span>Açık</span><span class="fw-semibold">${total - completed.length}</span>
+            </div>
+            <div class="d-flex justify-content-between small ${overdue.length? 'text-danger':'text-muted'}">
+              <span>Gecikmiş</span><span class="fw-semibold">${overdue.length}</span>
+            </div>
+          </div>
+          <div class="card-footer bg-transparent border-0">
+            <a class="btn btn-sm btn-outline-primary w-100" href="${detailsUrl}" target="_blank" rel="noopener"><i class="fas fa-user me-1"></i>Panelini Aç</a>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e){
+    row.innerHTML = '<div class="col-12 text-center text-danger py-4">Veriler yüklenemedi</div>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadDepartmentUsers);
+</script>
+{% endblock %}
+
+

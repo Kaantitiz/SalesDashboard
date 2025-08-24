@@ -1,0 +1,894 @@
+{% extends "base.html" %}
+
+{% block title %}Görevler - Satış Dashboard{% endblock %}
+{% block page_title %}Görevler{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-tasks me-2"></i>
+                    Görevler
+                </h5>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#taskCreateModal">
+                    <i class="fas fa-plus me-1"></i> Yeni Görev
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row g-2 mb-3 align-items-end flex-nowrap">
+                    <div class="col-md-4">
+                        <label class="form-label mb-1">Durum</label>
+                        <div id="statusChips" class="d-flex flex-nowrap gap-1 overflow-auto" style="white-space: nowrap;"></div>
+                        <small class="text-muted" id="statusSelectedInfo">Seçili: 0</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Atanan</label>
+                        <select id="filterAssignedTo" class="form-select form-select-sm">
+                            <option value="">Tümü</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Başlangıç</label>
+                        <input type="date" id="filterStart" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Bitiş</label>
+                        <input type="date" id="filterEnd" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button class="btn btn-outline-primary btn-sm w-100" id="applyFiltersBtn">
+                            <i class="fas fa-filter me-1"></i> Filtrele
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Başlık</th>
+                                <th>Atanan</th>
+                                <th>Atayan</th>
+                                <th>Durum</th>
+                                <th>Öncelik</th>
+                                <th>Bitiş</th>
+                                <th>Oluşturma</th>
+                                <th style="width: 210px;">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasksTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">Görevler yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card mt-4" id="planningCard">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-calendar-day me-2"></i>Bugünün Planı</h6>
+                        <div>
+                            <select id="calendarUserSelect" class="form-select form-select-sm d-inline-block" style="min-width: 160px; width: 200px; display: inline-block;">
+                                <option value="">Ben</option>
+                            </select>
+                            <button type="button" class="btn btn-outline-primary btn-sm ms-2" id="openCalendarBtn"><i class="fas fa-calendar-alt me-1"></i>Ay Takvimi</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <form id="planningForm">
+                            <div class="mb-3">
+                                <label class="form-label">Bugün Ne Yaptım?</label>
+                                <textarea class="form-control" id="yesterday" rows="2"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Yarın Ne Yapmayı Planladım? <small class="text-muted">(birden fazla maddeyi yeni satıra yazabilirsiniz)</small></label>
+                                <textarea class="form-control" id="today" rows="4" placeholder="Ör:\n- Tedarikçi görüşmesi\n- Sipariş onayı\n- Toplantı 15:00"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Bugün Karşılaştığım Zorluklar Nelerdir?</label>
+                                <textarea class="form-control" id="challenges" rows="2"></textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-primary" id="savePlanningBtn"><i class="fas fa-save me-1"></i>Kaydet</button>
+                            </div>
+                        </form>
+                        <div id="daySubsections" class="mt-4" style="display: none;">
+                            <h6 class="mb-2">Seçilen Gün Detayı</h6>
+                            <div id="selectedDayLabel" class="text-muted mb-2"></div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="border rounded p-3 h-100">
+                                        <h6 class="fw-semibold mb-2"><i class="fas fa-clipboard-list me-2"></i>Plan</h6>
+                                        <div id="dayPlanContent" class="small text-muted">Plan kaydı yok</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="border rounded p-3 h-100">
+                                        <h6 class="fw-semibold mb-2"><i class="fas fa-list-check me-2"></i>Görevler</h6>
+                                        <div id="dayTasksContent" class="small text-muted">Görev yok</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Görev Oluştur Modal -->
+<div class="modal fade" id="taskCreateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Görev</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="taskCreateForm">
+                    <div class="mb-3">
+                        <label class="form-label">Başlık *</label>
+                        <input type="text" id="taskTitle" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea id="taskDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Atanan</label>
+                            <div id="assignUserList" class="list-group" style="max-height: 240px; overflow:auto;"></div>
+                            <div class="small text-muted mt-1" id="assignSelectedInfo">Seçili: 0</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">Öncelik</label>
+                                    <select id="taskPriority" class="form-select">
+                                        <option value="low">Düşük</option>
+                                        <option value="normal" selected>Normal</option>
+                                        <option value="high">Yüksek</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Başlangıç Tarihi</label>
+                                    <input type="date" id="taskStartDate" class="form-control" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Bitiş Tarihi</label>
+                                    <input type="date" id="taskDueDate" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-1">
+                        <div class="col-12 d-flex align-items-center gap-3 flex-wrap">
+                            <div class="flex-grow-1">
+                                <label class="form-label">Tekrarlama</label>
+                                <select id="taskRecurrence" class="form-select">
+                                    <option value="none" selected>Tekrarsız</option>
+                                    <option value="daily">Günlük</option>
+                                    <option value="weekly">Haftalık</option>
+                                    <option value="monthly">Aylık</option>
+                                </select>
+                            </div>
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="taskIsRecurring">
+                                <label class="form-check-label" for="taskIsRecurring">Düzenli Görev</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary" id="saveTaskBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+    </div>
+
+<!-- Yorumlar Modal -->
+<div class="modal fade" id="taskCommentsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Görev Yorumları</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="commentsList" class="mb-3" style="max-height: 300px; overflow-y: auto;"></div>
+                <div class="input-group">
+                    <input type="text" id="newCommentText" class="form-control" placeholder="Yorum yaz..." />
+                    <button type="button" class="btn btn-primary" id="addCommentBtn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Ay Takvimi Modal -->
+<div class="modal fade" id="monthCalendarModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="calendarTitle">Ay Takvimi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3" id="monthsContainer"></div>
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle text-center" id="calendarTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let representatives = [];
+let representativesMap = new Map();
+let currentTaskForComments = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadRepresentatives().then(() => {
+        populateUserSelects();
+        renderStatusChips();
+        renderAssignUserList();
+        setDefaultDatesToToday();
+        loadTasks();
+    });
+    document.getElementById('applyFiltersBtn').addEventListener('click', loadTasks);
+    document.getElementById('saveTaskBtn').addEventListener('click', createTask);
+    document.getElementById('addCommentBtn').addEventListener('click', addComment);
+    // Recurrence: due date opsiyonel olsun
+    const recSel = document.getElementById('taskRecurrence');
+    const recChk = document.getElementById('taskIsRecurring');
+    recSel?.addEventListener('change', updateDueDateAvailability);
+    recChk?.addEventListener('change', updateDueDateAvailability);
+    updateDueDateAvailability();
+    // Planning hooks
+    loadTodayPlanning();
+    const saveBtn = document.getElementById('savePlanningBtn');
+    if (saveBtn) saveBtn.addEventListener('click', saveTodayPlanning);
+    const openCalBtn = document.getElementById('openCalendarBtn');
+    if (openCalBtn) openCalBtn.addEventListener('click', openCalendarModal);
+    // Admin/DM için kullanıcı listesi (takvim kullanıcı seçimi)
+    populateCalendarUserSelect();
+    // Klasörler Görevler sayfasından kaldırıldı; arşiv için /planning-archive sayfasını kullanın
+});
+
+// Chip tabanlı durum seçimi
+const TASK_STATUS_OPTIONS = [
+    { value: 'requested', label: 'Talep' },
+    { value: 'pending', label: 'Beklemede' },
+    { value: 'in_progress', label: 'Devam Ediyor' },
+    { value: 'completed', label: 'Tamamlandı' },
+    { value: 'cancelled', label: 'İptal' },
+];
+
+function renderStatusChips() {
+    const wrap = document.getElementById('statusChips');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    TASK_STATUS_OPTIONS.forEach(opt => {
+        const a = document.createElement('button');
+        a.type = 'button';
+        a.className = 'btn btn-outline-secondary btn-sm';
+        a.dataset.value = opt.value;
+        a.textContent = opt.label;
+        a.addEventListener('click', () => {
+            a.classList.toggle('active');
+            if (a.classList.contains('active')) a.classList.replace('btn-outline-secondary', 'btn-primary');
+            else a.classList.replace('btn-primary', 'btn-outline-secondary');
+            updateStatusSelectedInfo();
+        });
+        wrap.appendChild(a);
+    });
+    updateStatusSelectedInfo();
+}
+
+function getSelectedStatuses(){
+    const wrap = document.getElementById('statusChips');
+    if (!wrap) return [];
+    return Array.from(wrap.querySelectorAll('.btn.active')).map(b => b.dataset.value);
+}
+
+function updateStatusSelectedInfo(){
+    const cnt = getSelectedStatuses().length;
+    const info = document.getElementById('statusSelectedInfo');
+    if (info) info.textContent = `Seçili: ${cnt}`;
+}
+
+// Çoklu kullanıcı seçimi için list-group
+function renderAssignUserList(){
+    const list = document.getElementById('assignUserList');
+    if (!list) return;
+    list.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    representatives.forEach(u => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'list-group-item list-group-item-action';
+        item.dataset.value = String(u.id);
+        item.textContent = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || ('#'+u.id);
+        item.addEventListener('click', () => {
+            item.classList.toggle('active');
+            updateAssignSelectedInfo();
+        });
+        frag.appendChild(item);
+    });
+    list.appendChild(frag);
+    updateAssignSelectedInfo();
+}
+
+function getSelectedAssignUserIds(){
+    const list = document.getElementById('assignUserList');
+    if (!list) return [];
+    return Array.from(list.querySelectorAll('.list-group-item.active')).map(el => parseInt(el.dataset.value));
+}
+
+function updateAssignSelectedInfo(){
+    const cnt = getSelectedAssignUserIds().length;
+    const info = document.getElementById('assignSelectedInfo');
+    if (info) info.textContent = `Seçili: ${cnt}`;
+}
+
+function setDefaultDatesToToday(){
+    try {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth()+1).padStart(2,'0');
+        const dd = String(today.getDate()).padStart(2,'0');
+        const iso = `${yyyy}-${mm}-${dd}`;
+        const filterStart = document.getElementById('filterStart');
+        const taskStart = document.getElementById('taskStartDate');
+        if (filterStart && !filterStart.value) filterStart.value = iso;
+        if (taskStart && !taskStart.value) taskStart.value = iso;
+    } catch {}
+}
+
+function statusBadge(status) {
+    const map = {
+        requested: 'secondary',
+        pending: 'warning',
+        in_progress: 'primary',
+        completed: 'success',
+        cancelled: 'danger'
+    };
+    const cls = map[status] || 'light';
+    const labelMap = {
+        requested: 'Talep',
+        pending: 'Beklemede',
+        in_progress: 'Devam',
+        completed: 'Tamamlandı',
+        cancelled: 'İptal'
+    };
+    const text = labelMap[status] || status;
+    return `<span class="badge bg-${cls}">${text}</span>`;
+}
+
+// Planning: Today load/save
+async function loadTodayPlanning(){
+    try {
+        const r = await fetch('/api/planning/today');
+        const d = await r.json();
+        if (d.success && d.plan){
+            const y = document.getElementById('yesterday');
+            const t = document.getElementById('today');
+            const c = document.getElementById('challenges');
+            if (y) y.value = d.plan.yesterday_activities || '';
+            if (t) t.value = d.plan.today_plan || '';
+            if (c) c.value = d.plan.challenges || '';
+        }
+        // show today's snapshots just below form
+        const form = document.getElementById('planningForm');
+        if (form){
+            let wrap = document.getElementById('todaySnapshotsWrap');
+            if (!wrap){
+                wrap = document.createElement('div');
+                wrap.id = 'todaySnapshotsWrap';
+                wrap.className = 'mt-3';
+                form.parentElement.appendChild(wrap);
+            }
+            wrap.innerHTML = '<h6 class="mt-3">Bugünkü Kayıtlar</h6>' + ((d.snapshots||[]).map(s=>`
+                <div class="border rounded p-2 mb-2">
+                    <div class="small text-muted">${formatTRDateTime(s.created_at)}</div>
+                    ${s.today_plan ? `<div class="mt-1"><strong>Yarın:</strong><br/>${s.today_plan.replaceAll('\n','<br/>')}</div>`:''}
+                    ${s.yesterday_activities ? `<div class="mt-1"><strong>Bugün:</strong><br/>${s.yesterday_activities.replaceAll('\n','<br/>')}</div>`:''}
+                    ${s.challenges ? `<div class="mt-1"><strong>Bugünün Zorlukları:</strong><br/>${s.challenges.replaceAll('\n','<br/>')}</div>`:''}
+                </div>
+            `).join('') || '<div class="text-muted">Kayıt yok</div>');
+        }
+    } catch {}
+}
+
+async function saveTodayPlanning(){
+    const body = {
+        yesterday_activities: (document.getElementById('yesterday')?.value) || '',
+        today_plan: (document.getElementById('today')?.value) || '',
+        challenges: (document.getElementById('challenges')?.value) || '',
+    };
+    try {
+        const r = await fetch('/api/planning/today', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Kaydedilemedi');
+        if (typeof showToast === 'function') showToast('Plan kaydedildi', 'success'); else alert('Plan kaydedildi');
+    } catch(e) { alert(e.message || 'Hata'); }
+}
+
+// Calendar modal
+async function openCalendarModal(){
+    await loadMonthsList();
+    await buildCalendar();
+    const modal = document.getElementById('monthCalendarModal');
+    if (modal) new bootstrap.Modal(modal).show();
+}
+
+async function loadMonthsList(){
+    try {
+        const uid = document.getElementById('calendarUserSelect')?.value || '';
+        // Modal içinde seçili yıla göre 12 ayı gösterelim
+        const selectedYear = document.getElementById('yearFolderSelect')?.value || '';
+        const qs = new URLSearchParams();
+        if (uid) qs.set('user_id', uid);
+        if (selectedYear) qs.set('year', selectedYear);
+        const r = await fetch('/api/planning/months' + (qs.toString() ? `?${qs}` : ''));
+        const d = await r.json();
+        const cont = document.getElementById('monthsContainer');
+        if (!cont) return;
+        cont.innerHTML = '';
+        (d.months || []).forEach(m => {
+            const div = document.createElement('div');
+            div.className = 'border rounded p-3 d-flex align-items-center gap-3';
+            div.style.minWidth = '240px';
+            div.innerHTML = `
+                <i class=\"fas fa-folder fa-2x text-warning\"></i>
+                <div class=\"flex-grow-1\">
+                    <div class=\"fw-semibold\">${m.label}</div>
+                    <small class=\"text-muted\">${m.days_with_entries} gün kayıt</small>
+                </div>
+                <button class=\"btn btn-outline-primary btn-sm\">Aç</button>
+            `;
+            div.querySelector('button').addEventListener('click', ()=> buildCalendar(m.year, m.month));
+            cont.appendChild(div);
+        });
+    } catch {}
+}
+
+async function buildCalendar(year, month){
+    try {
+        const uid = document.getElementById('calendarUserSelect')?.value || '';
+        const r = await fetch(`/api/planning/month?year=${year || ''}&month=${month || ''}${uid ? `&user_id=${uid}` : ''}`);
+        const d = await r.json();
+        const table = document.getElementById('calendarTable');
+        if (!table) return;
+        table.innerHTML = '';
+        const title = document.getElementById('calendarTitle');
+        if (title) title.textContent = `${d.year}-${String(d.month).padStart(2,'0')} Ayı`;
+        const header = document.createElement('tr');
+        ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'].forEach(h=>{const th=document.createElement('th');th.textContent=h;header.appendChild(th);});
+        table.appendChild(header);
+        let dow = new Date(d.year, d.month-1, 1).getDay();
+        dow = (dow === 0) ? 6 : dow - 1;
+        let row = document.createElement('tr');
+        for (let i=0;i<dow;i++){ row.appendChild(document.createElement('td')); }
+        d.days.forEach(day => {
+            if (row.children.length === 7){ table.appendChild(row); row = document.createElement('tr'); }
+            const td = document.createElement('td');
+            td.style.minWidth='110px'; td.style.height='85px'; td.className='text-start';
+            td.innerHTML = `<div class=\"fw-semibold\">${day.day}</div>`;
+            if (day.has_planning) td.innerHTML += '<div><span class="badge bg-info">Plan</span></div>';
+            if (day.has_tasks) td.innerHTML += '<div><span class="badge bg-warning">Görev</span></div>';
+            const targetDate = `${d.year}-${String(d.month).padStart(2,'0')}-${String(day.day).padStart(2,'0')}`;
+            td.style.cursor='pointer';
+            td.addEventListener('click', ()=> openDayDetail(targetDate));
+            row.appendChild(td);
+        });
+        while (row.children.length < 7){ row.appendChild(document.createElement('td')); }
+        table.appendChild(row);
+    } catch {}
+}
+
+async function loadYearsAndMonthsFolders(){
+    try {
+        const uid = document.getElementById('calendarUserSelect')?.value || '';
+        // Yıl listesini getir
+        const ys = await fetch('/api/planning/years' + (uid ? `?user_id=${uid}` : '')); const yd = await ys.json();
+        const yearSel = document.getElementById('yearFolderSelect');
+        if (yearSel && yd.years){
+            const currentYear = new Date().getFullYear();
+            yearSel.innerHTML = '';
+            yd.years.forEach(y => {
+                const opt = document.createElement('option');
+                opt.value = y.year; opt.textContent = `${y.label}`; if (y.year === currentYear) opt.selected = true;
+                yearSel.appendChild(opt);
+            });
+        }
+        const selectedYear = yearSel?.value || '';
+        const qs = new URLSearchParams();
+        if (uid) qs.set('user_id', uid);
+        if (selectedYear) qs.set('year', selectedYear);
+        const r = await fetch('/api/planning/months' + (qs.toString() ? `?${qs}` : ''));
+        const d = await r.json();
+        const row = document.getElementById('monthsFolderRow');
+        if (!row) return;
+        row.innerHTML = '';
+        (d.months || []).forEach(m => {
+            const card = document.createElement('div');
+            card.className = 'border rounded p-3 d-flex align-items-center gap-3';
+            card.style.minWidth = '240px';
+            card.innerHTML = `
+                <i class=\"fas fa-folder fa-2x text-warning\"></i>
+                <div class=\"flex-grow-1\">
+                    <div class=\"fw-semibold\">${m.label}</div>
+                    <small class=\"text-muted\">${m.days_with_entries} gün kayıt</small>
+                </div>
+                <button class=\"btn btn-outline-primary btn-sm\">Takvim</button>
+            `;
+            card.querySelector('button').addEventListener('click', async ()=>{
+                await buildCalendar(m.year, m.month);
+                const modal = document.getElementById('monthCalendarModal');
+                if (modal) new bootstrap.Modal(modal).show();
+            });
+            row.appendChild(card);
+        });
+    } catch {}
+}
+
+async function openDayDetail(dateStr){
+    try {
+        const uid = document.getElementById('calendarUserSelect')?.value || '';
+        const r = await fetch(`/api/planning/day?date=${dateStr}${uid ? `&user_id=${uid}` : ''}`);
+        const d = await r.json();
+        if (!d.success) throw new Error('Yüklenemedi');
+        const section = document.getElementById('daySubsections');
+        const label = document.getElementById('selectedDayLabel');
+        const planEl = document.getElementById('dayPlanContent');
+        const tasksEl = document.getElementById('dayTasksContent');
+        if (section && label && planEl && tasksEl){
+            section.style.display = '';
+            label.textContent = d.date;
+            let planHtml = '';
+            if (d.plan){
+                planHtml += `<div class=\"mb-2\"><strong>Günün Son Kaydı:</strong><br/>${(d.plan.today_plan || '').replaceAll('\\n','<br/>')}</div>`;
+                if (d.plan.yesterday_activities) planHtml += `<div class=\"mb-2\"><strong>Dün:</strong><br/>${(d.plan.yesterday_activities || '').replaceAll('\\n','<br/>')}</div>`;
+                if (d.plan.challenges) planHtml += `<div class=\"mb-2\"><strong>Zorluklar:</strong><br/>${(d.plan.challenges || '').replaceAll('\\n','<br/>')}</div>`;
+            } else {
+                planHtml = '<span class="text-muted">Plan kaydı yok</span>';
+            }
+            const snaps = d.snapshots || [];
+            if (snaps.length){
+                planHtml += '<hr/><div class="mb-2"><strong>Tüm Kayıtlar</strong></div>' + snaps.map(s => `
+                    <div class=\"border rounded p-2 mb-2\">
+                        <div class=\"small text-muted\">${new Date(s.created_at).toLocaleString('tr-TR')}</div>
+                        ${s.today_plan ? `<div class=\"mt-1\"><strong>Bugün:</strong><br/>${s.today_plan.replaceAll('\\n','<br/>')}</div>`:''}
+                        ${s.yesterday_activities ? `<div class=\"mt-1\"><strong>Dün:</strong><br/>${s.yesterday_activities.replaceAll('\\n','<br/>')}</div>`:''}
+                        ${s.challenges ? `<div class=\"mt-1\"><strong>Zorluklar:</strong><br/>${s.challenges.replaceAll('\\n','<br/>')}</div>`:''}
+                    </div>
+                `).join('');
+            }
+            planEl.innerHTML = planHtml;
+            if (d.tasks && d.tasks.length){
+                tasksEl.innerHTML = d.tasks.map(t => `
+                    <div class=\"mb-1\">• ${t.title} <span class=\"badge bg-secondary ms-1\">${t.status}</span> <span class=\"badge bg-light text-dark ms-1\">${t.priority}</span></div>
+                `).join('');
+            } else {
+                tasksEl.innerHTML = '<span class="text-muted">Görev yok</span>';
+            }
+        }
+    } catch {}
+}
+
+function populateCalendarUserSelect(){
+    const sel = document.getElementById('calendarUserSelect');
+    if (!sel) return;
+    // Sadece admin/DM için dolu liste oluşturalım; diğerleri sadece "Ben"
+    const isAdmin = document.body.getAttribute('data-is-admin') === 'true';
+    if (!isAdmin) return;
+    fetch('/api/representatives').then(r=>r.json()).then(d=>{
+        (d.representatives || []).forEach(u => {
+            const opt = document.createElement('option');
+            opt.value = u.id; opt.textContent = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || ('#'+u.id);
+            sel.appendChild(opt);
+        });
+    }).catch(()=>{});
+}
+
+function priorityBadge(priority){
+    const map = { low: 'secondary', normal: 'info', high: 'danger' };
+    const labels = { low: 'Düşük', normal: 'Normal', high: 'Yüksek' };
+    return `<span class="badge bg-${map[priority] || 'light'}">${labels[priority] || priority}</span>`;
+}
+
+async function loadRepresentatives() {
+    try {
+        const res = await fetch('/api/representatives');
+        const data = await res.json();
+        representatives = data.representatives || [];
+        representativesMap.clear();
+        for (const u of representatives) {
+            const name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Bilinmeyen';
+            representativesMap.set(u.id, name);
+        }
+    } catch (e) {
+        representatives = [];
+        representativesMap.clear();
+    }
+}
+
+function populateUserSelects(){
+    const selFilter = document.getElementById('filterAssignedTo');
+    const selAssign = document.getElementById('taskAssignedTo');
+    if (selFilter) {
+        selFilter.innerHTML = '<option value="">Tümü</option>' +
+            representatives.map(u => `<option value="${u.id}">${(u.first_name || '')} ${(u.last_name || '')}</option>`).join('');
+    }
+    if (selAssign) {
+        selAssign.innerHTML = '<option value="">Seçiniz</option>' +
+            representatives.map(u => `<option value="${u.id}">${(u.first_name || '')} ${(u.last_name || '')}</option>`).join('');
+    }
+}
+
+async function loadTasks(){
+    const status = getSelectedStatuses();
+    const assignedToId = document.getElementById('filterAssignedTo').value;
+    const start = document.getElementById('filterStart').value;
+    const end = document.getElementById('filterEnd').value;
+
+    const params = new URLSearchParams();
+    if (status && status.length) status.forEach(s => params.append('status', s));
+    if (assignedToId) params.set('assigned_to_id', parseInt(assignedToId));
+    if (start) params.set('start_date', start);
+    if (end) params.set('end_date', end);
+
+    const tbody = document.getElementById('tasksTableBody');
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">Yükleniyor...</td></tr>';
+
+    try {
+        const res = await fetch('/api/tasks' + (params.toString() ? ('?' + params.toString()) : ''));
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Görevler yüklenemedi');
+        renderTasks(data.tasks || []);
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Görevler yüklenemedi</td></tr>';
+    }
+}
+
+function renderTasks(tasks){
+    const tbody = document.getElementById('tasksTableBody');
+    if (!tasks.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Görev bulunamadı</td></tr>';
+        return;
+    }
+    let html = '';
+    for (const t of tasks){
+        const assignee = t.assigned_to_id ? (representativesMap.get(t.assigned_to_id) || ('#' + t.assigned_to_id)) : '-';
+        const assigner = (t.assigned_by_id ? (representativesMap.get(t.assigned_by_id) || ('#' + t.assigned_by_id)) : (t.created_by_id ? (representativesMap.get(t.created_by_id) || ('#' + t.created_by_id)) : '-'));
+        const created = t.created_at ? formatTRDateTime(t.created_at) : '-';
+        const due = t.due_date ? formatTRDate(t.due_date) : '-';
+        const desc = (t.description || '').trim();
+        const isOverdue = t.due_date && (new Date(t.due_date) < new Date()) && (String(t.status||'').toLowerCase() !== 'completed');
+        html += `
+            <tr>
+                <td>
+                    <div class="fw-semibold">${t.title || '-'}</div>
+                    ${desc ? `<small class="text-muted">${desc}</small>` : ''}
+                </td>
+                <td>${assignee}</td>
+                <td>${assigner}</td>
+                <td>${statusBadge(t.status)} ${isOverdue ? '<span class="badge bg-danger ms-1">Gecikmiş</span>' : ''}</td>
+                <td>${priorityBadge(t.priority)}</td>
+                <td>${due}</td>
+                <td>${created}</td>
+                <td>
+                    <div class="d-flex flex-column gap-1 align-items-stretch" style="min-width:130px;">
+                        <button type="button" class="btn btn-outline-secondary btn-sm w-100" title="Yorumlar" onclick="openComments(${t.id})"><i class="fas fa-comments me-1"></i>Yorum</button>
+                        ${renderApproveButtonTall(t)}
+                        ${renderDeliverButtonTall(t)}
+                        ${document.body.getAttribute('data-is-admin')==='true' ? `<button type="button" class="btn btn-outline-danger btn-sm w-100" title="Sil" onclick="deleteTask(${t.id})"><i class=\"fas fa-trash me-1\"></i>Sil</button>` : ''}
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+    tbody.innerHTML = html;
+}
+
+async function createTask(){
+    const title = document.getElementById('taskTitle').value.trim();
+    const description = document.getElementById('taskDescription').value.trim();
+    const assignedTo = getSelectedAssignUserIds();
+    const priority = document.getElementById('taskPriority').value;
+    const startDate = document.getElementById('taskStartDate').value;
+    const dueDate = document.getElementById('taskDueDate').value;
+    const isRecurring = document.getElementById('taskIsRecurring')?.checked || false;
+    const recurrence = document.getElementById('taskRecurrence')?.value || 'none';
+
+    if (!title){
+        alert('Başlık zorunludur');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: title,
+                description: description || undefined,
+                assigned_to_id: undefined,
+                assigned_to_ids: assignedTo.length ? assignedTo.map(v => parseInt(v)) : undefined,
+                priority: priority || 'normal',
+                start_date: startDate || undefined,
+                due_date: dueDate || undefined,
+                is_recurring: isRecurring,
+                recurrence: recurrence,
+            })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Görev oluşturulamadı');
+        bootstrap.Modal.getInstance(document.getElementById('taskCreateModal')).hide();
+        document.getElementById('taskCreateForm').reset();
+        loadTasks();
+    } catch (e) {
+        alert(e.message || 'Görev oluşturulurken hata');
+    }
+}
+
+async function openComments(taskId){
+    currentTaskForComments = taskId;
+    await loadComments(taskId);
+    new bootstrap.Modal(document.getElementById('taskCommentsModal')).show();
+}
+
+async function loadComments(taskId){
+    const list = document.getElementById('commentsList');
+    list.innerHTML = '<div class="text-center text-muted py-3">Yükleniyor...</div>';
+    try {
+        const res = await fetch(`/api/tasks/${taskId}/comments`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Yorumlar yüklenemedi');
+        if (!data.comments || !data.comments.length){
+            list.innerHTML = '<div class="text-center text-muted py-3">Yorum yok</div>';
+            return;
+        }
+        let html = '';
+        for (const c of data.comments){
+            const who = c.user_name || ('#' + (c.user_id || '?'));
+            const when = c.created_at ? formatTRDateTime(c.created_at) : '';
+            html += `
+                <div class="border-bottom py-2">
+                    <div class="small text-muted">${who} • ${when}</div>
+                    <div>${c.comment || ''}</div>
+                </div>
+            `;
+        }
+        list.innerHTML = html;
+    } catch (e) {
+        list.innerHTML = '<div class="text-center text-danger py-3">Yorumlar yüklenemedi</div>';
+    }
+}
+
+async function addComment(){
+    const input = document.getElementById('newCommentText');
+    const text = (input.value || '').trim();
+    if (!text || !currentTaskForComments) return;
+    try {
+        const res = await fetch(`/api/tasks/${currentTaskForComments}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comment: text })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Yorum eklenemedi');
+        input.value = '';
+        loadComments(currentTaskForComments);
+    } catch (e) {
+        alert(e.message || 'Yorum eklenirken hata');
+    }
+}
+
+async function deleteTask(taskId){
+    if (!confirm('Bu görevi silmek istiyor musunuz?')) return;
+    try {
+        const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Silinemedi');
+        // Listeyi tazele
+        await loadTasks();
+        // Dashboard badges ve sidebar sayacı gibi yerler için okunmamış bildirim sayısını ve due-soon poll’unu tetikle
+        try { typeof fetchUnreadCount === 'function' && fetchUnreadCount(); } catch {}
+        try { typeof pollDesktopNotifications === 'function' && pollDesktopNotifications(); } catch {}
+    } catch (e) {
+        alert(e.message || 'Görev silinirken hata');
+    }
+}
+
+function updateDueDateAvailability(){
+    try {
+        const recSel = document.getElementById('taskRecurrence');
+        const recChk = document.getElementById('taskIsRecurring');
+        const due = document.getElementById('taskDueDate');
+        const dueLbl = document.querySelector('label[for="taskDueDate"]');
+        const shouldDisable = (!!recChk && recChk.checked) || (!!recSel && (recSel.value || 'none') !== 'none');
+        if (due){
+            due.disabled = shouldDisable;
+            if (shouldDisable) due.value = '';
+        }
+        if (dueLbl){
+            if (shouldDisable) dueLbl.classList.add('text-muted'); else dueLbl.classList.remove('text-muted');
+        }
+    } catch {}
+}
+
+function renderApproveButton(task){
+    try {
+        const me = parseInt(document.body.getAttribute('data-user-id'));
+        const status = (task.status || '').toLowerCase();
+        const canShow = (task.assigned_to_id === me) && (status === 'pending' || status === 'requested');
+        if (!canShow) return '';
+        return `<button type="button" class="btn btn-outline-success" title="Onayla" onclick="approveTask(${task.id})"><i class=\"fas fa-check\"></i> Onayla</button>`;
+    } catch { return ''; }
+}
+
+function renderApproveButtonTall(task){
+    const base = renderApproveButton(task);
+    if (!base) return '';
+    return base.replace('btn-outline-success', 'btn-outline-success btn-sm w-100').replace(' Onayla', ' Onayla');
+}
+
+function renderDeliverButton(task){
+    try {
+        const me = parseInt(document.body.getAttribute('data-user-id'));
+        const status = (task.status || '').toLowerCase();
+        const due = task.due_date ? new Date(task.due_date) : null;
+        const now = new Date();
+        const isOverdue = !!due && (due < now) && status !== 'completed';
+        const canShow = (task.assigned_to_id === me) && (status !== 'completed' && status !== 'cancelled') && !isOverdue;
+        if (!canShow) return isOverdue ? `<span class=\"badge bg-danger\">Gecikti</span>` : '';
+        return `<button type=\"button\" class=\"btn btn-outline-primary\" title=\"Teslim Edildi\" onclick=\"deliverTask(${task.id})\"><i class=\\\"fas fa-box\\\"></i> Teslim Edildi</button>`;
+    } catch { return ''; }
+}
+
+function renderDeliverButtonTall(task){
+    const base = renderDeliverButton(task);
+    if (!base) return '';
+    return base
+        .replace('btn-outline-primary', 'btn-outline-primary btn-sm w-100')
+        .replace('badge bg-danger', 'badge bg-danger w-100 text-center');
+}
+
+async function deliverTask(taskId){
+    try {
+        const res = await fetch(`/api/tasks/${taskId}/deliver`, { method: 'POST' });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Teslim işlemi başarısız');
+        loadTasks();
+    } catch (e) {
+        alert(e.message || 'Görev teslim edilirken hata');
+    }
+}
+
+async function approveTask(taskId){
+    try {
+        const res = await fetch(`/api/tasks/${taskId}/approve`, { method: 'POST' });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Onaylanamadı');
+        loadTasks();
+    } catch (e) {
+        alert(e.message || 'Görev onaylanırken hata');
+    }
+}
+
+
+</script>
+{% endblock %}
+
+

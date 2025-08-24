@@ -1,0 +1,781 @@
+{% extends "base.html" %}
+
+{% block title %}Kullanıcı Paneli - Satış Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% if current_user.department and current_user.department.name == 'Satın Alma Departmanı' %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0"><i class="fas fa-warehouse me-2"></i>Satın Alma Paneli</h1>
+            <p class="text-muted">Hoş geldiniz, <span id="panelUserName">{{ current_user.get_full_name() }}</span>! Görev performans özetiniz aşağıda.</p>
+        </div>
+    </div>
+    <!-- Satın Alma Metrikleri -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Tamamlanan Görev</div>
+                    <div class="h3 mb-0" id="pm-completed">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Tamamlama Oranı</div>
+                    <div class="h3 mb-0" id="pm-completion-rate">0%</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Gecikme Oranı</div>
+                    <div class="h3 mb-0" id="pm-overdue-rate">0%</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Ortalama Tamamlama Süresi</div>
+                    <div class="h3 mb-0" id="pm-avg-completion">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Zorluk Ağırlıklı Puan</div>
+                    <div class="h3 mb-1" id="pm-score">0</div>
+                    <div class="small text-muted">Yüksek=3, Normal=2, Düşük=1 (tamamlananlar)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Aktif Gün Oranı</div>
+                    <div class="h3 mb-0" id="pm-active-ratio">0%</div>
+                    <div class="small text-muted" id="pm-active-days-detail"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Açık/Geciken Görevler</div>
+                    <div class="d-flex gap-3">
+                        <div><div class="h4 mb-0" id="pm-open">0</div><div class="small text-muted">Açık</div></div>
+                        <div><div class="h4 mb-0 text-danger" id="pm-overdue">0</div><div class="small text-muted">Gecikmiş</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-user me-2"></i>
+                Kullanıcı Paneli
+            </h1>
+            <p class="text-muted">Hoş geldiniz, <span id="panelUserName">{{ current_user.get_full_name() }}</span>!</p>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Aylık Planlama Takvimi (Kullanıcı ana sayfası) -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        Planlama Takvimi (Bu Ay)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle text-center" id="userHomeCalendarTable"></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if current_user.department and current_user.department.name == 'Satış Departmanı' %}
+    <!-- Genel Özet (Sadece Satış ve diğerleri) -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card metric-card success"><div class="card-body"><div class="d-flex justify-content-between align-items-center"><div><h6 class="card-title text-muted mb-1">Toplam Satış</h6><h3 class="mb-0" id="total-sales">₺0</h3></div><div class="text-success"><i class="fas fa-chart-line fa-2x"></i></div></div></div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card danger"><div class="card-body"><div class="d-flex justify-content-between align-items-center"><div><h6 class="card-title text-muted mb-1">Toplam İade</h6><h3 class="mb-0" id="total-returns">₺0</h3></div><div class="text-danger"><i class="fas fa-undo fa-2x"></i></div></div></div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card info"><div class="card-body"><div class="d-flex justify-content-between align-items-center"><div><h6 class="card-title text-muted mb-1">Net Satış</h6><h3 class="mb-0" id="net-sales">₺0</h3></div><div class="text-info"><i class="fas fa-wallet fa-2x"></i></div></div></div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card warning"><div class="card-body"><div class="d-flex justify-content-between align-items-center"><div><h6 class="card-title text-muted mb-1">İade Oranı</h6><h3 class="mb-0" id="return-rate">0%</h3></div><div class="text-warning"><i class="fas fa-percentage fa-2x"></i></div></div></div></div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if current_user.department and current_user.department.name == 'Satış Departmanı' %}
+    <!-- Filtreler (Sadece Satış) -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-filter me-2"></i>
+                        Filtreler
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="date-range" class="form-label">Tarih Aralığı</label>
+                            <select class="form-select" id="date-range">
+                                <option value="today">Bugün</option>
+                                <option value="week">Bu Hafta</option>
+                                <option value="month" selected>Bu Ay</option>
+                                <option value="quarter">Bu Çeyrek</option>
+                                <option value="year">Bu Yıl</option>
+                                <option value="custom">Özel Aralık</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="product-group-filter" class="form-label">Ürün Grubu</label>
+                            <select class="form-select" id="product-group-filter">
+                                <option value="">Tümü</option>
+                                <option value="Elektronik">Elektronik</option>
+                                <option value="Giyim">Giyim</option>
+                                <option value="Ev & Yaşam">Ev & Yaşam</option>
+                                <option value="Spor">Spor</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="brand-filter" class="form-label">Marka</label>
+                            <select class="form-select" id="brand-filter">
+                                <option value="">Tümü</option>
+                                <!-- JavaScript ile doldurulacak -->
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <button class="btn btn-primary w-100" onclick="applyFilters()">
+                                <i class="fas fa-search me-2"></i>Filtrele
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if current_user.department and current_user.department.name == 'Satış Departmanı' %}
+    <!-- Grafikler (Sadece Satış) -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Satış Trendi
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="trendChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Ürün Dağılımı
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="productChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {# Detaylı Tablo kaldırıldı #}
+
+    {% if current_user.department and current_user.department.name == 'Satın Alma Departmanı' %}
+    <!-- Verilen Görevler (Satın Alma) -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="fas fa-list-check me-2"></i>Verilen Görevler</h5>
+                    <a href="{{ url_for('tasks_page') }}" class="btn btn-sm btn-outline-primary">Görevler Sayfası</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Başlık</th>
+                                    <th>Durum</th>
+                                    <th>Öncelik</th>
+                                    <th>Başlangıç</th>
+                                    <th>Bitiş</th>
+                                    <th>Oluşturma</th>
+                                </tr>
+                            </thead>
+                            <tbody id="assignedTasksBody">
+                                <tr><td colspan="6" class="text-center text-muted py-3">Yükleniyor...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Satın Alma paneli metrikleri
+async function loadPurchaseMetrics(forUserId){
+    try {
+        const qs = forUserId ? (`?assigned_to_id=${encodeURIComponent(forUserId)}`) : '';
+        const tasksRes = await fetch('/api/tasks' + qs);
+        const tasksData = await tasksRes.json();
+        const tasks = (tasksData && tasksData.tasks) ? tasksData.tasks : [];
+        const total = tasks.length;
+        const completed = tasks.filter(t => (t.status||'').toLowerCase()==='completed');
+        const inProgress = tasks.filter(t => (t.status||'').toLowerCase()==='in_progress');
+        const pending = tasks.filter(t => ['pending','requested'].includes((t.status||'').toLowerCase()));
+        const today = new Date(); today.setHours(0,0,0,0);
+        const overdue = tasks.filter(t => t.due_date && new Date(t.due_date) < today && (t.status||'').toLowerCase()!=='completed');
+        // ortalama tamamlama süresi (gün)
+        const avgDays = (completed.length>0) ? (completed.reduce((acc,t)=>{
+            const created = t.created_at ? new Date(t.created_at) : null;
+            const done = t.updated_at ? new Date(t.updated_at) : null;
+            if (!created || !done) return acc;
+            const diff = Math.max(0, (done - created) / (1000*60*60*24));
+            return acc + diff;
+        },0) / completed.length) : 0;
+        // zorluk puanı (tamamlanan)
+        const weight = { high:3, normal:2, low:1 };
+        const score = completed.reduce((acc,t)=> acc + (weight[(t.priority||'normal').toLowerCase()]||2), 0);
+        // aktif gün oranı (aylık)
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth()+1;
+        const pmRes = await fetch(`/api/planning/month?year=${y}&month=${m}` + (forUserId?`&user_id=${encodeURIComponent(forUserId)}`:''));
+        const pm = await pmRes.json();
+        const days = pm.days || [];
+        const activeDays = days.filter(d => d.has_planning || d.has_tasks).length;
+        const totalDays = days.length || new Date(y, m, 0).getDate();
+        const activeRatio = totalDays ? Math.round((activeDays/totalDays)*100) : 0;
+
+        // Yazdır
+        const setTxt = (id, val)=>{ const el=document.getElementById(id); if (el) el.textContent = val; };
+        setTxt('pm-completed', completed.length);
+        setTxt('pm-completion-rate', (total? (completed.length/total*100):0).toFixed(0)+'%');
+        setTxt('pm-overdue-rate', (total? (overdue.length/total*100):0).toFixed(0)+'%');
+        setTxt('pm-avg-completion', avgDays? (avgDays.toFixed(1)+' gün') : '-');
+        setTxt('pm-score', score);
+        setTxt('pm-active-ratio', activeRatio + '%');
+        const det = document.getElementById('pm-active-days-detail');
+        if (det) det.textContent = `${activeDays}/${totalDays} gün`;
+        setTxt('pm-open', inProgress.length + pending.length);
+        setTxt('pm-overdue', overdue.length);
+    } catch(e) { /* sessiz geç */ }
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+    try {
+        const deptName = '{{ current_user.department.name if current_user.department else "" }}';
+        // Başka kullanıcı görüntüleme desteği
+        const params = new URLSearchParams(window.location.search);
+        const viewUserId = params.get('view_user_id');
+        if (viewUserId){
+            // Özet ve listeleri hedef kullanıcıya göre yükle
+            if (typeof $ !== 'undefined'){
+                $.ajax({ url: '/api/reports/summary', data: { representative_id: viewUserId }, success: updateMetrics});
+                $.ajax({ url: '/api/sales', data: { representative_id: viewUserId }, success: (d)=> updateReportTable(d.sales,'Satış') });
+                $.ajax({ url: '/api/returns', data: { representative_id: viewUserId }, success: (d)=> updateReportTable(d.returns,'İade') });
+            }
+            loadAssignedTasksFor(viewUserId);
+            // İsim etiketi
+            try {
+                fetch(`/auth/profile?user_id=${viewUserId}`).then(r=>r.json()).then(p=>{
+                    const nameEl = document.querySelectorAll('#panelUserName');
+                    nameEl.forEach(el=> el.textContent = p.full_name || (p.first_name + ' ' + p.last_name));
+                }).catch(()=>{});
+            } catch {}
+            // Satın alma görünümündeysek metrikleri hedef kullanıcı için hesapla
+            if (deptName === 'Satın Alma Departmanı'){
+                loadPurchaseMetrics(viewUserId);
+            }
+        }
+        if (deptName === 'Satın Alma Departmanı'){
+            if (!viewUserId){
+                loadPurchaseMetrics();
+                loadAssignedTasks();
+            }
+        } else {
+            // Satış görünümü: sadece kendi verilerini yükle
+            if (!viewUserId){
+                if (typeof loadUserData === 'function') loadUserData();
+                if (typeof loadCharts === 'function') loadCharts();
+                if (typeof loadReportTable === 'function') loadReportTable();
+            }
+        }
+        buildUserHomeCalendar();
+    } catch {}
+});
+</script>
+<script>
+function buildUserHomeCalendar(){
+    try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const params = new URLSearchParams(window.location.search);
+        const uid = params.get('view_user_id') || '';
+        const qsUid = uid ? `&user_id=${encodeURIComponent(uid)}` : '';
+        fetch(`/api/planning/month?year=${year}&month=${month}${qsUid}`)
+            .then(r=>r.json())
+            .then(d=>{
+                const table = document.getElementById('userHomeCalendarTable');
+                if (!table) return;
+                table.innerHTML = '';
+                const header = document.createElement('tr');
+                ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'].forEach(h=>{const th=document.createElement('th');th.textContent=h;header.appendChild(th);});
+                table.appendChild(header);
+                let dow = new Date(d.year, d.month-1, 1).getDay();
+                dow = (dow === 0) ? 6 : dow - 1;
+                let row = document.createElement('tr');
+                for (let i=0;i<dow;i++){ row.appendChild(document.createElement('td')); }
+                d.days.forEach(day => {
+                    if (row.children.length === 7){ table.appendChild(row); row = document.createElement('tr'); }
+                    const td = document.createElement('td');
+                    td.style.minWidth='110px'; td.style.height='85px'; td.className='text-start';
+                    td.innerHTML = `<div class=\"fw-semibold\">${day.day}</div>`;
+                    if (day.has_planning) td.innerHTML += '<div><span class=\"badge bg-info\">Plan</span></div>';
+                    if (day.has_tasks) {
+                        td.innerHTML += '<div><span class=\"badge bg-warning\">Görev</span></div>';
+                        // Admin/DY ise atayan/atanan özetini göster
+                        try {
+                            const isAdmin = document.body.getAttribute('data-is-admin') === 'true';
+                            const isDM = document.body.getAttribute('data-is-dm') === 'true';
+                            if ((isAdmin || isDM) && Array.isArray(day.tasks_meta) && day.tasks_meta.length){
+                                const lines = day.tasks_meta.map(m => `${m.assigned_by_name} → ${m.assigned_to_name}`);
+                                let extra = '';
+                                if (typeof day.tasks_meta_more === 'number' && day.tasks_meta_more > 0){ extra = ` +${day.tasks_meta_more}`; }
+                                td.innerHTML += `<div class=\"small text-muted\">${lines.join('<br/>')}${extra}</div>`;
+                            }
+                        } catch {}
+                    }
+                    if (day.has_task_assign) td.innerHTML += '<div><span class="badge bg-primary">Atama</span></div>';
+                    if (day.has_task_due) td.innerHTML += '<div><span class="badge bg-danger">Bitiş</span></div>';
+                    const dateStr = `${d.year}-${String(d.month).padStart(2,'0')}-${String(day.day).padStart(2,'0')}`;
+                    td.style.cursor='pointer';
+                    td.addEventListener('click', ()=> openUserDayDetailPopup(dateStr));
+                    row.appendChild(td);
+                });
+                while (row.children.length < 7){ row.appendChild(document.createElement('td')); }
+                table.appendChild(row);
+            }).catch(()=>{});
+    } catch {}
+}
+
+function ensureUserDayDetailModal(){
+    if (document.getElementById('userDayDetailModal')) return;
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'userDayDetailModal';
+    modal.tabIndex = -1;
+    modal.innerHTML = `
+        <div class=\"modal-dialog modal-lg\">
+            <div class=\"modal-content\">
+                <div class=\"modal-header\">
+                    <h5 class=\"modal-title\" id=\"userDayDetailTitle\">Gün Detayı</h5>
+                    <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>
+                </div>
+                <div class=\"modal-body\" id=\"userDayDetailBody\">
+                    <div class=\"text-center text-muted py-3\">Yükleniyor...</div>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+}
+
+async function openUserDayDetailPopup(dateStr){
+    try {
+        ensureUserDayDetailModal();
+        const modalEl = document.getElementById('userDayDetailModal');
+        const titleEl = document.getElementById('userDayDetailTitle');
+        const bodyEl = document.getElementById('userDayDetailBody');
+        if (titleEl) titleEl.textContent = `${dateStr} - Gün Detayı`;
+        if (bodyEl) bodyEl.innerHTML = '<div class=\"text-center text-muted py-3\">Yükleniyor...</div>';
+        const params = new URLSearchParams(window.location.search);
+        const uid = params.get('view_user_id');
+        const r = await fetch(`/api/planning/day?date=${dateStr}` + (uid?`&user_id=${encodeURIComponent(uid)}`:''));
+        const d = await r.json();
+        let planHtml = '';
+        if (d.plan){
+            planHtml += `<div class=\"mb-2\"><strong>Plan:</strong><br/>${(d.plan.today_plan||'').replaceAll('\\n','<br/>')}</div>`;
+            if (d.plan.yesterday_activities) planHtml += `<div class=\"mb-2\"><strong>Dün:</strong><br/>${(d.plan.yesterday_activities||'').replaceAll('\\n','<br/>')}</div>`;
+            if (d.plan.challenges) planHtml += `<div class=\"mb-2\"><strong>Zorluklar:</strong><br/>${(d.plan.challenges||'').replaceAll('\\n','<br/>')}</div>`;
+        } else {
+            planHtml = '<span class=\"text-muted\">Plan kaydı yok</span>';
+        }
+        let tasksHtml = '';
+        const tasks = d.tasks || [];
+        if (tasks.length){
+            tasksHtml = tasks.map(t => {
+                const st = (t.status||'').toLowerCase();
+                const pr = (t.priority||'').toLowerCase();
+                const sBadge = st==='completed'?'success':(st==='in_progress'?'primary':(st==='pending'?'warning':(st==='cancelled'?'danger':'secondary')));
+                const pBadge = pr==='high'?'danger':(pr==='low'?'secondary':'info');
+                const statusTR = { requested:'Talep', pending:'Beklemede', in_progress:'Devam', completed:'Tamamlandı', cancelled:'İptal' };
+                const priorityTR = { high:'Yüksek', normal:'Normal', low:'Düşük' };
+                const sLabel = statusTR[st] || (t.status || '');
+                const pLabel = priorityTR[pr] || (t.priority || '');
+                const start = t.start_date ? formatTRDate(t.start_date) : '-';
+                const due = t.due_date ? formatTRDate(t.due_date) : '-';
+                const canDelete = document.body.getAttribute('data-is-admin') === 'true';
+                const delBtn = canDelete ? ` <button type=\"button\" class=\"btn btn-sm btn-outline-danger ms-2\" onclick=\"deleteTaskInlineUser(${t.id}, '${dateStr}')\"><i class=\\"fas fa-trash\\"></i> Sil</button>` : '';
+                return `<div class=\"mb-2\">• ${t.title || 'Görev'} <span class=\"badge bg-${sBadge} ms-1\">${sLabel}</span> <span class=\"badge bg-${pBadge} ms-1\">${pLabel}</span>${delBtn}<div class=\"small text-muted\">Başlangıç: ${start} • Bitiş: ${due}</div></div>`;
+            }).join('');
+        } else {
+            tasksHtml = '<span class=\"text-muted\">Görev yok</span>';
+        }
+        if (bodyEl) bodyEl.innerHTML = `
+            <div class=\"row\">
+                <div class=\"col-md-6\"><div class=\"border rounded p-3 h-100\"><h6 class=\"fw-semibold mb-2\"><i class=\"fas fa-clipboard-list me-2\"></i>Plan</h6>${planHtml}</div></div>
+                <div class=\"col-md-6\"><div class=\"border rounded p-3 h-100\"><h6 class=\"fw-semibold mb-2\"><i class=\"fas fa-list-check me-2\"></i>Görevler</h6>${tasksHtml}</div></div>
+            </div>`;
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    } catch {
+        try { showToast('Gün detayı yüklenemedi', 'danger'); } catch {}
+    }
+}
+
+async function deleteTaskInlineUser(taskId, dateStr){
+    try {
+        const r = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Silinemedi');
+        await openUserDayDetailPopup(dateStr);
+        try { buildUserHomeCalendar(); } catch(e){}
+        try { typeof fetchUnreadCount === 'function' && fetchUnreadCount(); } catch(e){}
+        try { typeof pollDesktopNotifications === 'function' && pollDesktopNotifications(); } catch(e){}
+        showToast('Görev silindi', 'success');
+    } catch(e){ showToast(e.message || 'Silinemedi', 'danger'); }
+}
+
+// Satın Alma: Verilen görevler
+async function loadAssignedTasks(){
+    try {
+        const me = document.body.getAttribute('data-user-id');
+        const qs = me ? (`?assigned_to_id=${me}`) : '';
+        const r = await fetch('/api/tasks' + qs);
+        const d = await r.json();
+        const tasks = (d && d.tasks) ? d.tasks : [];
+        const tbody = document.getElementById('assignedTasksBody');
+        if (!tbody) return;
+        if (!tasks.length){ tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">Görev yok</td></tr>'; return; }
+        const sBadge = s=>({requested:'secondary',pending:'warning',in_progress:'primary',completed:'success',cancelled:'danger'})[s]||'light';
+        const sLabel = s=>({requested:'Talep',pending:'Beklemede',in_progress:'Devam',completed:'Tamamlandı',cancelled:'İptal'})[s]||s;
+        const pBadge = p=>({low:'secondary',normal:'info',high:'danger'})[p]||'light';
+        tbody.innerHTML = tasks.map(t=>{
+            const st = (t.status||'').toLowerCase();
+            const pr = (t.priority||'').toLowerCase();
+            const start = t.start_date ? formatTRDate(t.start_date) : '-';
+            const due = t.due_date ? formatTRDate(t.due_date) : '-';
+            const created = t.created_at ? formatTRDateTime(t.created_at) : '-';
+            return `<tr>
+                <td>${t.title || '-'}</td>
+                <td><span class="badge bg-${sBadge(st)}">${sLabel(st)}</span></td>
+                <td><span class="badge bg-${pBadge(pr)}">${(pr==='low'?'Düşük':pr==='high'?'Yüksek':'Normal')}</span></td>
+                <td>${start}</td>
+                <td>${due}</td>
+                <td>${created}</td>
+            </tr>`;
+        }).join('');
+    } catch (e){
+        const tbody = document.getElementById('assignedTasksBody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-3">Görevler yüklenemedi</td></tr>';
+    }
+}
+
+// Başka kullanıcı için görevleri yükle (Satın Alma görünümü)
+async function loadAssignedTasksFor(userId){
+    try {
+        const qs = userId ? (`?assigned_to_id=${userId}`) : '';
+        const r = await fetch('/api/tasks' + qs);
+        const d = await r.json();
+        const tasks = (d && d.tasks) ? d.tasks : [];
+        const tbody = document.getElementById('assignedTasksBody');
+        if (!tbody) return;
+        if (!tasks.length){ tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">Görev yok</td></tr>'; return; }
+        const sBadge = s=>({requested:'secondary',pending:'warning',in_progress:'primary',completed:'success',cancelled:'danger'})[s]||'light';
+        const sLabel = s=>({requested:'Talep',pending:'Beklemede',in_progress:'Devam',completed:'Tamamlandı',cancelled:'İptal'})[s]||s;
+        const pBadge = p=>({low:'secondary',normal:'info',high:'danger'})[p]||'light';
+        tbody.innerHTML = tasks.map(t=>{
+            const st = (t.status||'').toLowerCase();
+            const pr = (t.priority||'').toLowerCase();
+            const start = t.start_date ? formatTRDate(t.start_date) : '-';
+            const due = t.due_date ? formatTRDate(t.due_date) : '-';
+            const created = t.created_at ? formatTRDateTime(t.created_at) : '-';
+            return `<tr>
+                <td>${t.title || '-'}</td>
+                <td><span class="badge bg-${sBadge(st)}">${sLabel(st)}</span></td>
+                <td><span class="badge bg-${pBadge(pr)}">${(pr==='low'?'Düşük':pr==='high'?'Yüksek':'Normal')}</span></td>
+                <td>${start}</td>
+                <td>${due}</td>
+                <td>${created}</td>
+            </tr>`;
+        }).join('');
+    } catch (e){
+        const tbody = document.getElementById('assignedTasksBody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-3">Görevler yüklenemedi</td></tr>';
+    }
+}
+
+let currentFilters = {
+    dateRange: 'month',
+    productGroup: '',
+    brand: ''
+};
+
+// Sayfa yüklendiğinde (Sadece Satış görünümü için)
+$(document).ready(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isClean = urlParams.get('clean') === '1';
+    const isPurchasing = {{ 'true' if (current_user.department and current_user.department.name == 'Satın Alma Departmanı') else 'false' }};
+    if (!isPurchasing){
+        loadUserData();
+        loadCharts();
+        loadReportTable();
+        $('#date-range, #product-group-filter, #brand-filter').on('change', function() { updateFilters(); });
+    }
+    if (isClean){
+        try {
+            document.querySelector('.sidebar')?.remove();
+            document.querySelector('.top-header')?.remove();
+            document.querySelector('.main-content')?.style.setProperty('margin-left','0');
+        } catch {}
+    }
+});
+
+// Kullanıcı verilerini yükle
+function loadUserData() {
+    $.ajax({
+        url: '/api/reports/summary',
+        method: 'GET',
+        data: currentFilters,
+        success: function(data) {
+            updateMetrics(data);
+        },
+        error: function(xhr) {
+            console.error('Veri yükleme hatası:', xhr);
+        }
+    });
+}
+
+// Metrikleri güncelle
+function updateMetrics(data) {
+    $('#total-sales').text(formatCurrency(data.total_sales));
+    $('#total-returns').text(formatCurrency(data.total_returns));
+    $('#net-sales').text(formatCurrency(data.net_sales));
+    $('#return-rate').text(data.return_rate.toFixed(1) + '%');
+}
+
+// Grafikleri yükle
+// Chart.js instance referansları
+let __trendChartInstance = null;
+let __productChartInstance = null;
+
+function loadCharts() {
+    // Trend grafiği
+    const trendCanvas = document.getElementById('trendChart');
+    if (trendCanvas){
+        const trendCtx = trendCanvas.getContext('2d');
+        if (__trendChartInstance) { try { __trendChartInstance.destroy(); } catch(e){} }
+        __trendChartInstance = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran'],
+            datasets: [{
+                label: 'Satışlar',
+                data: [12000000, 15000000, 18000000, 14000000, 16000000, 20000000],
+                borderColor: '#2d6cdf',
+                backgroundColor: 'rgba(45, 108, 223, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'İadeler',
+                data: [1000000, 1500000, 2000000, 1200000, 1800000, 2500000],
+                borderColor: '#e74c3c',
+                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₺' + (value / 1000000) + 'M';
+                        }
+                    }
+                }
+            }
+        }
+        });
+    }
+    
+    // Ürün dağılımı grafiği
+    const productCanvas = document.getElementById('productChart');
+    if (productCanvas){
+        const productCtx = productCanvas.getContext('2d');
+        if (__productChartInstance) { try { __productChartInstance.destroy(); } catch(e){} }
+        __productChartInstance = new Chart(productCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Elektronik', 'Giyim', 'Ev & Yaşam', 'Spor'],
+            datasets: [{
+                data: [35, 25, 20, 20],
+                backgroundColor: [
+                    '#2d6cdf',
+                    '#e74c3c',
+                    '#27ae60',
+                    '#f1c40f'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+        });
+    }
+}
+
+// Rapor tablosunu yükle
+function loadReportTable() {
+    // Satış verilerini yükle
+    $.ajax({
+        url: '/api/sales',
+        method: 'GET',
+        data: currentFilters,
+        success: function(data) {
+            updateReportTable(data.sales, 'Satış');
+        }
+    });
+    
+    // İade verilerini yükle
+    $.ajax({
+        url: '/api/returns',
+        method: 'GET',
+        data: currentFilters,
+        success: function(data) {
+            updateReportTable(data.returns, 'İade');
+        }
+    });
+}
+
+function updateReportTable(data, type) {
+    const tbody = $('#report-table-body');
+    
+    data.forEach(function(item) {
+        const row = `
+            <tr>
+                <td>${new Date(item.date).toLocaleDateString('tr-TR')}</td>
+                <td>${item.product_group}</td>
+                <td>${item.brand}</td>
+                <td>${item.product_name}</td>
+                <td>${item.quantity}</td>
+                <td>${formatCurrency(item.unit_price)}</td>
+                <td class="${type === 'Satış' ? 'text-success' : 'text-danger'} fw-bold">
+                    ${formatCurrency(item.net_price)}
+                </td>
+                <td>
+                    <span class="badge bg-${type === 'Satış' ? 'success' : 'danger'}">
+                        ${type}
+                    </span>
+                </td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
+}
+
+// Filtreleri güncelle
+function updateFilters() {
+    currentFilters.dateRange = $('#date-range').val();
+    currentFilters.productGroup = $('#product-group-filter').val();
+    currentFilters.brand = $('#brand-filter').val();
+}
+
+// Filtreleri uygula
+function applyFilters() {
+    updateFilters();
+    loadUserData();
+    loadReportTable();
+    showAlert('info', 'Filtreler uygulandı');
+}
+
+// Excel export
+function exportToExcel() {
+    // Excel export işlemi
+    showAlert('success', 'Excel dosyası hazırlanıyor...');
+}
+
+// PDF export
+function exportToPDF() {
+    // PDF export işlemi
+    showAlert('success', 'PDF dosyası hazırlanıyor...');
+}
+
+// Yardımcı fonksiyonlar
+function formatCurrency(amount) {
+    return '₺' + amount.toLocaleString('tr-TR');
+}
+
+function showAlert(type, message) {
+    const alert = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    $('.main-content').prepend(alert);
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Satış Paneli{% endblock %}
+{% block page_title %}Satış Paneli{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-md-3 mb-3">
+      <div class="card h-100"><div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Toplam Satış</div>
+          <div class="h3 mb-0" id="ps-total-sales">₺0</div>
+        </div>
+        <i class="fas fa-chart-line text-success fa-2x"></i>
+      </div></div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card h-100"><div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Toplam İade</div>
+          <div class="h3 mb-0" id="ps-total-returns">₺0</div>
+        </div>
+        <i class="fas fa-undo text-danger fa-2x"></i>
+      </div></div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card h-100"><div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Net Satış</div>
+          <div class="h3 mb-0" id="ps-net-sales">₺0</div>
+        </div>
+        <i class="fas fa-wallet text-primary fa-2x"></i>
+      </div></div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card h-100"><div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">İade Oranı</div>
+          <div class="h3 mb-0" id="ps-return-rate">0%</div>
+        </div>
+        <i class="fas fa-percentage text-warning fa-2x"></i>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-6 mb-3">
+      <div class="card h-100">
+        <div class="card-header"><h5 class="card-title mb-0"><i class="fas fa-chart-pie me-2"></i>Marka/Ürün Grubu Dağılımı</h5></div>
+        <div class="card-body"><canvas id="psProductChart" height="120"></canvas></div>
+      </div>
+    </div>
+    <div class="col-md-6 mb-3">
+      <div class="card h-100">
+        <div class="card-header"><h5 class="card-title mb-0"><i class="fas fa-list me-2"></i>En Çok Satanlar</h5></div>
+        <div class="card-body">
+          <div class="table-responsive" style="max-height:260px; overflow:auto;">
+            <table class="table table-sm align-middle">
+              <thead><tr><th>Marka</th><th>Grup</th><th class="text-end">Tutar</th></tr></thead>
+              <tbody id="psTopTable"><tr><td colspan="3" class="text-muted text-center py-3">Yükleniyor...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let psProductChartInstance = null;
+function psFormat(amount){ try { return '₺' + (amount||0).toLocaleString('tr-TR'); } catch(e){ return '₺' + amount; } }
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Özet metrikler
+  try {
+    const r = await fetch('/api/reports/summary');
+    const d = await r.json();
+    document.getElementById('ps-total-sales').textContent = psFormat(d.total_sales||0);
+    document.getElementById('ps-total-returns').textContent = psFormat(d.total_returns||0);
+    document.getElementById('ps-net-sales').textContent = psFormat(d.net_sales||0);
+    document.getElementById('ps-return-rate').textContent = ((d.return_rate||0).toFixed? d.return_rate.toFixed(1): d.return_rate)+'%';
+  } catch(e){}
+
+  // Ürün/Marka dağılımı
+  try {
+    const r = await fetch('/api/sales/charts-data');
+    const d = await r.json();
+    const rows = d.brand_product_sales || [];
+    // tablo
+    const tbody = document.getElementById('psTopTable');
+    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Veri yok</td></tr>'; }
+    else {
+      tbody.innerHTML = rows.map(it => `<tr><td><strong>${it.brand||'-'}</strong></td><td>${it.product_group||'-'}</td><td class="text-end text-success fw-semibold">${psFormat(it.total||0)}</td></tr>`).join('');
+    }
+    // chart
+    const labels = rows.map(it => `${it.brand} - ${it.product_group}`);
+    const values = rows.map(it => it.total);
+    const canvas = document.getElementById('psProductChart');
+    if (canvas){
+      const ctx = canvas.getContext('2d');
+      if (psProductChartInstance) { try{ psProductChartInstance.destroy(); }catch(e){} }
+      psProductChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data: values, borderWidth: 2 }]},
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }}}
+      });
+    }
+  } catch(e){}
+});
+</script>
+{% endblock %}
+
+
+
+

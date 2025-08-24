@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Planlama - Satış Dashboard{% endblock %}
+{% block page_title %}Planlama{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="fas fa-calendar-day me-2"></i>Bugünün Planı</h5>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm" id="openCalendarBtn"><i class="fas fa-calendar-alt me-1"></i>Ay Görünümü</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <form id="planningForm">
+                    <div class="mb-3">
+                        <label class="form-label">Dün Neler Yaptın?</label>
+                        <textarea class="form-control" id="yesterday" rows="3" placeholder="Dünkü faaliyetleriniz"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bugün Planın Nedir?</label>
+                        <textarea class="form-control" id="today" rows="3" placeholder="Bugünkü planlarınız"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Karşılaşılan Zorluklar</label>
+                        <textarea class="form-control" id="challenges" rows="2" placeholder="Notlar"></textarea>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-primary" id="savePlanningBtn"><i class="fas fa-save me-1"></i>Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-folder-tree me-2"></i>Ay Klasörleri</h5>
+            </div>
+            <div class="card-body">
+                <div id="monthsContainer" class="d-flex flex-wrap gap-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ay Takvimi Modal -->
+<div class="modal fade" id="monthCalendarModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="calendarTitle">Ay Takvimi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle text-center" id="calendarTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    loadToday();
+    loadMonths();
+    document.getElementById('savePlanningBtn').addEventListener('click', saveToday);
+    document.getElementById('openCalendarBtn').addEventListener('click', () => openMonthCalendar());
+});
+
+async function loadToday(){
+    try {
+        const r = await fetch('/api/planning/today');
+        const d = await r.json();
+        if (d.success && d.plan){
+            document.getElementById('yesterday').value = d.plan.yesterday_activities || '';
+            document.getElementById('today').value = d.plan.today_plan || '';
+            document.getElementById('challenges').value = d.plan.challenges || '';
+        }
+    } catch {}
+}
+
+async function saveToday(){
+    const body = {
+        yesterday_activities: document.getElementById('yesterday').value,
+        today_plan: document.getElementById('today').value,
+        challenges: document.getElementById('challenges').value,
+    };
+    try {
+        const r = await fetch('/api/planning/today', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Kaydedilemedi');
+        alert('Kaydedildi');
+        loadMonths();
+    } catch (e) { alert(e.message || 'Hata'); }
+}
+
+async function loadMonths(){
+    try {
+        const r = await fetch('/api/planning/months');
+        const d = await r.json();
+        const cont = document.getElementById('monthsContainer');
+        cont.innerHTML = '';
+        (d.months || []).forEach(m => {
+            const div = document.createElement('div');
+            div.className = 'border rounded p-3 d-flex align-items-center gap-3';
+            div.style.minWidth = '240px';
+            div.innerHTML = `
+                <i class="fas fa-folder fa-2x text-warning"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">${m.label}</div>
+                    <small class="text-muted">${m.days_with_entries} gün kayıt</small>
+                </div>
+                <button class="btn btn-outline-primary btn-sm">Aç</button>
+            `;
+            div.querySelector('button').addEventListener('click', () => openMonthCalendar(m.year, m.month));
+            cont.appendChild(div);
+        });
+    } catch {}
+}
+
+async function openMonthCalendar(year, month){
+    try {
+        const r = await fetch(`/api/planning/month?year=${year || ''}&month=${month || ''}`);
+        const d = await r.json();
+        if (!d.success) throw new Error('Yüklenemedi');
+        const { year: y, month: m, days } = d;
+        document.getElementById('calendarTitle').textContent = `${y}-${String(m).padStart(2, '0')} Ayı`;
+        const table = document.getElementById('calendarTable');
+        table.innerHTML = '';
+        // Basit 7 sütunlu takvim
+        const header = document.createElement('tr');
+        ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'].forEach(dn => {
+            const th = document.createElement('th'); th.textContent = dn; header.appendChild(th);
+        });
+        table.appendChild(header);
+        let row;
+        let dow = (new Date(y, m-1, 1)).getDay();
+        // JS getDay: 0 Pazar -> Pazartesi başlangıcı için dönüştür
+        dow = (dow === 0) ? 6 : dow - 1;
+        row = document.createElement('tr');
+        for (let i=0;i<dow;i++){ row.appendChild(document.createElement('td')); }
+        days.forEach(dy => {
+            if (row.children.length === 7){ table.appendChild(row); row = document.createElement('tr'); }
+            const td = document.createElement('td');
+            td.style.minWidth = '100px'; td.style.height = '80px';
+            td.innerHTML = `<div class="fw-semibold">${dy.day}</div>`;
+            if (dy.has_planning) td.innerHTML += '<div><span class="badge bg-info">Plan</span></div>';
+            if (dy.has_tasks) td.innerHTML += '<div><span class="badge bg-warning">Görev</span></div>';
+            row.appendChild(td);
+        });
+        while (row.children.length < 7){ row.appendChild(document.createElement('td')); }
+        table.appendChild(row);
+        new bootstrap.Modal(document.getElementById('monthCalendarModal')).show();
+    } catch (e) { alert(e.message || 'Hata'); }
+}
+</script>
+{% endblock %}
+
+
+

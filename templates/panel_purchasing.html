@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Satın Alma Paneli{% endblock %}
+{% block page_title %}Satın Alma Paneli{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4 g-3">
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Tamamlanan Görev</div><div class="h3 mb-0" id="pp-completed">0</div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Tamamlama Oranı</div><div class="h3 mb-0" id="pp-completion">0%</div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Gecikme Oranı</div><div class="h3 mb-0" id="pp-overdue">0%</div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Zorluk Ağırlıklı Puan</div><div class="h3 mb-0" id="pp-score">0</div></div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="card-title mb-0"><i class="fas fa-list-check me-2"></i>Verilen Görevler</h5>
+      <a href="{{ url_for('tasks_page') }}" class="btn btn-sm btn-outline-primary">Görevler</a>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle">
+          <thead><tr><th>Başlık</th><th>Durum</th><th>Öncelik</th><th>Başlangıç</th><th>Bitiş</th><th>Oluşturma</th></tr></thead>
+          <tbody id="ppTasksBody"><tr><td colspan="6" class="text-center text-muted py-3">Yükleniyor...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function trDate(s){ try{ return s ? new Date(s).toLocaleDateString('tr-TR') : '-'; }catch(e){ return s||'-'; } }
+function trDateTime(s){ try{ return s ? new Date(s).toLocaleString('tr-TR') : '-'; }catch(e){ return s||'-'; } }
+
+document.addEventListener('DOMContentLoaded', async ()=>{
+  try{
+    const r = await fetch('/api/tasks');
+    const d = await r.json();
+    const tasks = d.tasks||[];
+    const tbody = document.getElementById('ppTasksBody');
+    if (!tasks.length){ tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Görev yok</td></tr>'; }
+    else {
+      const sBadge = s=>({requested:'secondary',pending:'warning',in_progress:'primary',completed:'success',cancelled:'danger'})[s]||'light';
+      const sLabel = s=>({requested:'Talep',pending:'Beklemede',in_progress:'Devam',completed:'Tamamlandı',cancelled:'İptal'})[s]||s;
+      const pBadge = p=>({low:'secondary',normal:'info',high:'danger'})[p]||'light';
+      tbody.innerHTML = tasks.map(t=>`<tr>
+        <td>${t.title||'-'}</td>
+        <td><span class="badge bg-${sBadge((t.status||'').toLowerCase())}">${sLabel((t.status||'').toLowerCase())}</span></td>
+        <td><span class="badge bg-${pBadge((t.priority||'').toLowerCase())}">${(t.priority||'Normal')}</span></td>
+        <td>${trDate(t.start_date)}</td>
+        <td>${trDate(t.due_date)}</td>
+        <td>${trDateTime(t.created_at)}</td>
+      </tr>`).join('');
+    }
+    // KPI hesapları
+    const completed = tasks.filter(t=> (t.status||'').toLowerCase()==='completed').length;
+    document.getElementById('pp-completed').textContent = completed;
+    const overdue = tasks.filter(t=> t.due_date && new Date(t.due_date) < new Date() && (t.status||'').toLowerCase()!=='completed').length;
+    const compRate = tasks.length ? Math.round(completed/tasks.length*100) : 0;
+    const overRate = tasks.length ? Math.round(overdue/tasks.length*100) : 0;
+    document.getElementById('pp-completion').textContent = compRate + '%';
+    document.getElementById('pp-overdue').textContent = overRate + '%';
+    const weight = { high:3, normal:2, low:1 };
+    const score = tasks.filter(t=> (t.status||'').toLowerCase()==='completed').reduce((a,t)=> a + (weight[(t.priority||'normal').toLowerCase()]||2),0);
+    document.getElementById('pp-score').textContent = score;
+  }catch(e){}
+});
+</script>
+{% endblock %}
+
+
+
+
