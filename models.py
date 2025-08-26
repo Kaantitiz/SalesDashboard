@@ -65,9 +65,22 @@ class User(UserMixin, db.Model):
     
     # İlişkiler
     targets = db.relationship('Target', backref='user', lazy=True)
-    sales = db.relationship('Sales', backref='representative', lazy=True)
-    returns = db.relationship('Returns', backref='representative', lazy=True)
+    # İlişki çakışmasını önlemek için basitleştirildi
+    # sales = db.relationship('Sales', backref='representative', lazy=True)
+    # returns = db.relationship('Returns', backref='representative', lazy=True)
     plans = db.relationship('Planning', backref='representative', lazy=True)
+    
+    # Basit ve güvenli ilişkiler
+    def get_sales(self):
+        """Kullanıcının satışlarını getir"""
+        from models import Sales
+        return Sales.query.filter_by(representative_id=self.id).all()
+    
+    def get_returns(self):
+        """Kullanıcının iadelerini getir"""
+        from models import Returns
+        return Returns.query.filter_by(representative_id=self.id).all()
+    
     # İlişki çakışmasını önlemek için geçici olarak kaldırıldı
     # activity_logs = db.relationship('ActivityLog', backref='user', lazy=True, cascade='all, delete-orphan')
     # task_comments = db.relationship('TaskComment', backref='user', lazy=True, cascade='all, delete-orphan')
@@ -211,8 +224,8 @@ class Sales(db.Model):
     original_product_group = db.Column(db.String(100), nullable=True)  # URUN_ANA_GRUP alanından
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # İlişki çakışmasını önlemek için backref kullanıldı
-    representative = db.relationship('User', backref='sales')
+    # İlişki çakışmasını önlemek için kaldırıldı
+    # representative = db.relationship('User', backref='sales')
 
 class Returns(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -234,8 +247,8 @@ class Returns(db.Model):
     original_product_group = db.Column(db.String(100), nullable=True)  # URUN_ANA_GRUP alanından
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # İlişki çakışmasını önlemek için backref kullanıldı
-    representative = db.relationship('User', backref='returns')
+    # İlişki çakışmasını önlemek için kaldırıldı
+    # representative = db.relationship('User', backref='returns')
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
