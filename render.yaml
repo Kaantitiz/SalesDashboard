@@ -14,8 +14,23 @@ services:
         fromDatabase:
           name: sales-dashboard-db
           property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: FLASK_APP
+        value: app.py
+      - key: PYTHONPATH
+        value: .
+      - key: FORCE_MIGRATION
+        value: "true"
     healthCheckPath: /
     autoDeploy: true
+    # Kalıcı depolama için disk ekle
+    disk:
+      name: persistent-storage
+      mountPath: /opt/render/project/src/uploads
+      sizeGB: 1
 
 databases:
   - name: sales-dashboard-db
