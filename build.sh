@@ -19,21 +19,21 @@ echo "PostgreSQL migration calistiriliyor..."
 if [ -n "$DATABASE_URL" ]; then
     echo "PostgreSQL veritabani bulundu, migration baslatiliyor..."
     
-    # Migration script'ini çalıştır
-    echo "Migration script calistiriliyor..."
-    python postgres_migration.py
+    # Önce güçlü migration script'ini dene
+    echo "Güçlü migration script calistiriliyor..."
+    python force_migration.py
     
-    # Migration başarılı mı kontrol et
     if [ $? -eq 0 ]; then
-        echo "✅ PostgreSQL migration basarili!"
-        
-        # Basit veri kontrol
-        echo "Basit veri kontrol calistiriliyor..."
-        python simple_check.py
-        
+        echo "✅ Güçlü migration basarili!"
     else
-        echo "⚠️ PostgreSQL migration hatasi, SQLite ile devam ediliyor..."
-        python -c "
+        echo "⚠️ Güçlü migration hatasi, normal migration deneniyor..."
+        python postgres_migration.py
+        
+        if [ $? -eq 0 ]; then
+            echo "✅ Normal migration basarili!"
+        else
+            echo "❌ Migration basarisiz, SQLite ile devam ediliyor..."
+            python -c "
 from main import create_app
 from models import db
 app = create_app()
@@ -41,7 +41,13 @@ with app.app_context():
     db.create_all()
     print('SQLite veritabani tablolari olusturuldu')
 "
+        fi
     fi
+    
+    # Basit veri kontrol
+    echo "Basit veri kontrol calistiriliyor..."
+    python simple_check.py
+    
 else
     echo "DATABASE_URL bulunamadi, SQLite kullaniliyor..."
     python -c "
