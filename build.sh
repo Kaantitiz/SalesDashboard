@@ -27,46 +27,13 @@ if [ -n "$DATABASE_URL" ]; then
     if [ $? -eq 0 ]; then
         echo "✅ PostgreSQL migration basarili!"
         
-        # Veritabanı tablolarını kontrol et
-        echo "Veritabani tablolari kontrol ediliyor..."
-        python -c "
-import psycopg2
-import os
-try:
-    conn = psycopg2.connect(os.environ.get('DATABASE_URL'))
-    cursor = conn.cursor()
-    cursor.execute('SELECT table_name FROM information_schema.tables WHERE table_schema = \\'public\\';')
-    tables = cursor.fetchall()
-    print('✅ Mevcut tablolar:', [t[0] for t in tables])
-    
-    # Kullanıcı sayısını kontrol et
-    cursor.execute('SELECT COUNT(*) FROM \"user\"')
-    user_count = cursor.fetchone()[0]
-    print('✅ Kullanici sayisi:', user_count)
-    
-    conn.close()
-except Exception as e:
-    print('❌ Veritabani kontrol hatasi:', e)
-"
-        
-        # Veri kontrol script'ini çalıştır
-        echo "Veri kontrol script'i calistiriliyor..."
-        python check_data.py
+        # Basit veri kontrol
+        echo "Basit veri kontrol calistiriliyor..."
+        python simple_check.py
         
     else
-        echo "⚠️ PostgreSQL migration hatasi, tekrar deneniyor..."
-        
-        # İkinci deneme
-        echo "Ikinci migration denemesi..."
-        python postgres_migration.py
-        
-        if [ $? -eq 0 ]; then
-            echo "✅ Ikinci denemede migration basarili!"
-            # Veri kontrol
-            python check_data.py
-        else
-            echo "❌ Migration basarisiz, SQLite ile devam ediliyor..."
-            python -c "
+        echo "⚠️ PostgreSQL migration hatasi, SQLite ile devam ediliyor..."
+        python -c "
 from main import create_app
 from models import db
 app = create_app()
@@ -74,7 +41,6 @@ with app.app_context():
     db.create_all()
     print('SQLite veritabani tablolari olusturuldu')
 "
-        fi
     fi
 else
     echo "DATABASE_URL bulunamadi, SQLite kullaniliyor..."

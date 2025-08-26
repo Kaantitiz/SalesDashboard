@@ -68,8 +68,9 @@ class User(UserMixin, db.Model):
     sales = db.relationship('Sales', backref='representative', lazy=True)
     returns = db.relationship('Returns', backref='representative', lazy=True)
     plans = db.relationship('Planning', backref='representative', lazy=True)
-    activity_logs = db.relationship('ActivityLog', backref='user', lazy=True, cascade='all, delete-orphan')
-    task_comments = db.relationship('TaskComment', backref='user', lazy=True, cascade='all, delete-orphan')
+    # İlişki çakışmasını önlemek için geçici olarak kaldırıldı
+    # activity_logs = db.relationship('ActivityLog', backref='user', lazy=True, cascade='all, delete-orphan')
+    # task_comments = db.relationship('TaskComment', backref='user', lazy=True, cascade='all, delete-orphan')
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -253,8 +254,8 @@ class ActivityLog(db.Model):
     ip_address = db.Column(db.String(45), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # İlişki çakışmasını önlemek için viewonly=True ve overlaps kullanıldı
-    user = db.relationship('User', viewonly=True, overlaps="activity_logs")
+    # İlişki çakışmasını önlemek için foreign key kullanıldı
+    # user = db.relationship('User', viewonly=True, overlaps="activity_logs")
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -313,5 +314,5 @@ class TaskComment(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     task = db.relationship('Task', backref=db.backref('comments', lazy=True, cascade='all, delete-orphan'))
-    # İlişki çakışmasını önlemek için viewonly=True ve overlaps kullanıldı
-    user = db.relationship('User', viewonly=True, overlaps="task_comments")
+    # İlişki çakışmasını önlemek için foreign key kullanıldı
+    # user = db.relationship('User', viewonly=True, overlaps="task_comments")
