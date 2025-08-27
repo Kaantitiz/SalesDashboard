@@ -2311,24 +2311,54 @@ def get_sales_charts_data():
         brand_product_sales = brand_product_query.group_by(Sales.brand, Sales.product_group).all()
         
         # Aylık satış trendi (son 12 ay) - PostgreSQL ve SQLite uyumlu
-        if db.session.bind.dialect.name == 'postgresql':
-            # PostgreSQL için TO_CHAR kullan
+        try:
+            # PostgreSQL için EXTRACT kullan (daha güvenilir)
+            if db.session.bind.dialect.name == 'postgresql':
+                monthly_query = db.session.query(
+                    func.concat(
+                        func.extract('year', Sales.date).cast(func.String),
+                        '-',
+                        func.lpad(func.extract('month', Sales.date).cast(func.String), 2, '0')
+                    ).label('month'),
+                    func.sum(Sales.net_price).label('total_sales')
+                )
+                if query_filter:
+                    monthly_query = monthly_query.filter(Sales.representative_id == query_filter['representative_id'])
+                monthly_sales = monthly_query.group_by(
+                    func.extract('year', Sales.date),
+                    func.extract('month', Sales.date)
+                ).order_by(
+                    func.extract('year', Sales.date),
+                    func.extract('month', Sales.date)
+                ).limit(12).all()
+            else:
+                # SQLite için strftime kullan
+                monthly_query = db.session.query(
+                    func.strftime('%Y-%m', Sales.date).label('month'),
+                    func.sum(Sales.net_price).label('total_sales')
+                )
+                if query_filter:
+                    monthly_query = monthly_query.filter(Sales.representative_id == query_filter['representative_id'])
+                monthly_sales = monthly_query.group_by(func.strftime('%Y-%m', Sales.date)).order_by('month').limit(12).all()
+        except Exception as e:
+            # Fallback: Basit string format kullan
             monthly_query = db.session.query(
-                func.to_char(Sales.date, 'YYYY-MM').label('month'),
+                func.concat(
+                    func.extract('year', Sales.date).cast(func.String),
+                    '-',
+                    func.lpad(func.extract('month', Sales.date).cast(func.String), 2, '0')
+                ).label('month'),
                 func.sum(Sales.net_price).label('total_sales')
             )
             if query_filter:
                 monthly_query = monthly_query.filter(Sales.representative_id == query_filter['representative_id'])
-            monthly_sales = monthly_query.group_by(func.to_char(Sales.date, 'YYYY-MM')).order_by('month').limit(12).all()
-        else:
-            # SQLite için strftime kullan
-            monthly_query = db.session.query(
-                func.strftime('%Y-%m', Sales.date).label('month'),
-                func.sum(Sales.net_price).label('total_sales')
-            )
-            if query_filter:
-                monthly_query = monthly_query.filter(Sales.representative_id == query_filter['representative_id'])
-            monthly_sales = monthly_query.group_by(func.strftime('%Y-%m', Sales.date)).order_by('month').limit(12).all()
+            monthly_sales = monthly_query.group_by(
+                func.extract('year', Sales.date),
+                func.extract('month', Sales.date)
+            ).order_by(
+                func.extract('year', Sales.date),
+                func.extract('month', Sales.date)
+            ).limit(12).all()
 
         return jsonify({
             'success': True,
