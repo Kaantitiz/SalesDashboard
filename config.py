@@ -18,14 +18,8 @@ class Config:
             SQLALCHEMY_DATABASE_URI = DATABASE_URL
             print("✅ PostgreSQL bağlantısı kuruldu")
         except ImportError:
-            print("⚠️ PostgreSQL paketi bulunamadı, psycopg2-binary yükleniyor...")
-            import subprocess
-            import sys
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "psycopg2-binary"])
-            import psycopg2
-            DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
-            SQLALCHEMY_DATABASE_URI = DATABASE_URL
-            print("✅ PostgreSQL bağlantısı kuruldu")
+            print("❌ psycopg2 bulunamadı, SQLite kullanılıyor")
+            SQLALCHEMY_DATABASE_URI = 'sqlite:///sales_dashboard.db'
     else:
         # Geliştirme ortamında SQLite kullan
         if os.environ.get('FLASK_ENV') == 'development':
