@@ -1000,6 +1000,7 @@
                                 <span>Bildirimler</span>
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-sm btn-outline-secondary" id="markAllReadBtn">Tümünü Okundu</button>
+                                    <button class="btn btn-sm btn-outline-danger" id="deleteAllNotifsBtn">Tümünü Sil</button>
                                     <button class="btn btn-sm btn-outline-primary" id="refreshNotifsBtn">Yenile</button>
                                 </div>
                             </div>
@@ -1188,6 +1189,7 @@
         const notifListContainer = document.getElementById('notifListContainer');
         const refreshNotifsBtn = document.getElementById('refreshNotifsBtn');
         const markAllReadBtn = document.getElementById('markAllReadBtn');
+        const deleteAllNotifsBtn = document.getElementById('deleteAllNotifsBtn');
 
         async function fetchUnreadCount(){
             try {
@@ -1288,6 +1290,28 @@
                 notifBadge.textContent = '0';
                 showToast('Tüm bildirimler okundu', 'success');
             } catch { showToast('Bildirimler işaretlenemedi', 'danger'); }
+        });
+
+        deleteAllNotifsBtn?.addEventListener('click', async ()=>{
+            if (!confirm('Tüm bildirimleri silmek istediğinizden emin misiniz?\n\n⚠️ Bu işlem geri alınamaz!')) {
+                return;
+            }
+            try {
+                const r = await fetch('/api/notifications/delete-all', { method: 'DELETE' });
+                const d = await r.json();
+                if (d.success) {
+                    await fetchNotifications();
+                    await fetchUnreadCount();
+                    // Rozeti gizle
+                    notifBadge.classList.add('d-none');
+                    notifBadge.textContent = '0';
+                    showToast('Tüm bildirimler silindi', 'success');
+                } else {
+                    throw new Error(d.error || 'Bildirimler silinemedi');
+                }
+            } catch (e) {
+                showToast('Bildirimler silinemedi: ' + (e.message || 'Bilinmeyen hata'), 'danger');
+            }
         });
         document.addEventListener('click', (e)=>{
             if (!notifDropdown.contains(e.target) && e.target !== notifBellBtn){

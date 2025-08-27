@@ -16,6 +16,9 @@
                     </select>
                     <select id="archiveYearSelect" class="form-select form-select-sm" style="width: 140px"></select>
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="archiveReloadBtn"><i class="fas fa-sync"></i></button>
+                    <button type="button" class="btn btn-sm btn-success" id="exportExcelBtn" title="Excel olarak indir">
+                        <i class="fas fa-file-excel me-1"></i>Excel İndir
+                    </button>
                 </div>
             </div>
             <div class="card-body">
@@ -50,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     populateArchiveUserSelect();
     loadDepartments().then(()=> loadArchiveYears());
     document.getElementById('archiveReloadBtn').addEventListener('click', loadDepartments);
+    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
     document.getElementById('archiveYearSelect').addEventListener('change', ()=>{
         // Collapse/refresh user months based on new year: simply reload departments list (users keep Aylar toggle behavior)
         loadDepartments();
@@ -263,6 +267,74 @@ async function openArchiveCalendar(year, month, userId){
             }
         };
     }
+}
+
+async function exportToExcel() {
+    try {
+        const uid = document.getElementById('archiveUserSelect').value || '';
+        const year = document.getElementById('archiveYearSelect').value || new Date().getFullYear();
+        
+        if (!year) {
+            alert('Lütfen bir yıl seçin');
+            return;
+        }
+        
+        // Loading göster
+        const btn = document.getElementById('exportExcelBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Hazırlanıyor...';
+        btn.disabled = true;
+        
+        try {
+            // Excel export API'sini çağır
+            const response = await fetch(`/api/planning/export-excel?year=${year}${uid ? `&user_id=${uid}` : ''}`, {
+                method: 'GET'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Excel export hatası');
+            }
+            
+            // Dosyayı indir
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `planlama_arsivi_${year}${uid ? '_kullanici' : ''}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showToast('Excel dosyası başarıyla indirildi', 'success');
+        } finally {
+            // Button'u eski haline getir
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    } catch (error) {
+        console.error('Excel export hatası:', error);
+        showToast('Excel export hatası: ' + error.message, 'danger');
+    }
+}
+
+function showToast(message, type = 'info') {
+    // Basit toast notification
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    // 3 saniye sonra otomatik kaldır
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 3000);
 }
 
 async function openDaySideBySide(dateStr){

@@ -533,6 +533,146 @@ def planning_archive_departments():
         })
     return jsonify({'success': True, 'departments': result})
 
+@api.route('/planning/export-excel', methods=['GET'])
+@login_required
+def export_planning_excel():
+    """Planlama ve görev verilerini Excel olarak export et"""
+    try:
+        year = request.args.get('year', type=int)
+        user_id = request.args.get('user_id', type=int)
+        
+        if not year:
+            return jsonify({'success': False, 'error': 'Yıl parametresi gerekli'}), 400
+        
+        # Kullanıcı yetkisi kontrol et
+        if user_id and not current_user.is_admin() and not current_user.is_department_manager():
+            return jsonify({'success': False, 'error': 'Yetkiniz yok'}), 403
+        
+        if user_id and current_user.is_department_manager():
+            # DM sadece kendi departmanındaki kullanıcıları görebilir
+            if not is_user_in_scope(user_id):
+                return jsonify({'success': False, 'error': 'Bu kullanıcıya erişim yetkiniz yok'}), 403
+        
+        # Verileri topla
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        
+        wb = Workbook()
+        
+        # Planlama sayfası
+        ws_planning = wb.active
+        ws_planning.title = "Planlama"
+        
+        # Başlık stilleri
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="2D6CDF", end_color="2D6CDF", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Başlıkları ekle
+        headers = ["Tarih", "Kullanıcı", "Dün Yapılanlar", "Bugün Planı", "Zorluklar", "Oluşturulma Tarihi"]
+        for col, header in enumerate(headers, 1):
+            cell = ws_planning.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+        
+        # Planlama verilerini ekle
+        planning_query = Planning.query
+        if user_id:
+            planning_query = planning_query.filter_by(representative_id=user_id)
+        else:
+            # Kullanıcı kendi verilerini export ediyor
+            planning_query = planning_query.filter_by(representative_id=current_user.id)
+        
+        planning_query = planning_query.filter(
+            Planning.date >= date(year, 1, 1),
+            Planning.date <= date(year, 12, 31)
+        ).order_by(Planning.date.desc())
+        
+        planning_data = planning_query.all()
+        
+        row = 2
+        for plan in planning_data:
+            user = User.query.get(plan.representative_id)
+            ws_planning.cell(row=row, column=1, value=plan.date.strftime('%d.%m.%Y'))
+            ws_planning.cell(row=row, column=2, value=user.get_full_name() if user else 'Bilinmeyen')
+            ws_planning.cell(row=row, column=3, value=plan.yesterday_activities or '')
+            ws_planning.cell(row=row, column=4, value=plan.today_plan or '')
+            ws_planning.cell(row=row, column=5, value=plan.challenges or '')
+            ws_planning.cell(row=row, column=6, value=plan.created_at.strftime('%d.%m.%Y %H:%M'))
+            row += 1
+        
+        # Sütun genişliklerini ayarla
+        for col in range(1, len(headers) + 1):
+            ws_planning.column_dimensions[chr(64 + col)].width = 20
+        
+        # Görevler sayfası
+        ws_tasks = wb.create_sheet("Görevler")
+        
+        # Görev başlıkları
+        task_headers = ["Başlık", "Açıklama", "Atanan", "Oluşturan", "Durum", "Öncelik", "Bitiş Tarihi", "Oluşturulma Tarihi"]
+        for col, header in enumerate(task_headers, 1):
+            cell = ws_tasks.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+        
+        # Görev verilerini ekle
+        tasks_query = Task.query
+        if user_id:
+            tasks_query = tasks_query.filter(
+                (Task.assigned_to_id == user_id) | (Task.created_by_id == user_id)
+            )
+        else:
+            # Kullanıcı kendi görevlerini export ediyor
+            tasks_query = tasks_query.filter(
+                (Task.assigned_to_id == current_user.id) | (Task.created_by_id == current_user.id)
+            )
+        
+        # Yıl içindeki görevleri filtrele
+        tasks_data = []
+        for task in tasks_query.all():
+            # Görevin o yıl içinde aktif olduğunu kontrol et
+            if task.due_date and task.due_date.year == year:
+                tasks_data.append(task)
+            elif task.created_at and task.created_at.year == year:
+                tasks_data.append(task)
+        
+        row = 2
+        for task in tasks_data:
+            assigned_user = User.query.get(task.assigned_to_id) if task.assigned_to_id else None
+            created_user = User.query.get(task.created_by_id) if task.created_by_id else None
+            
+            ws_tasks.cell(row=row, column=1, value=task.title or '')
+            ws_tasks.cell(row=row, column=2, value=task.description or '')
+            ws_tasks.cell(row=row, column=3, value=assigned_user.get_full_name() if assigned_user else 'Atanmamış')
+            ws_tasks.cell(row=row, column=4, value=created_user.get_full_name() if created_user else 'Bilinmeyen')
+            ws_tasks.cell(row=row, column=5, value=task.status or '')
+            ws_tasks.cell(row=row, column=6, value=task.priority or '')
+            ws_tasks.cell(row=row, column=7, value=task.due_date.strftime('%d.%m.%Y') if task.due_date else '')
+            ws_tasks.cell(row=row, column=8, value=task.created_at.strftime('%d.%m.%Y %H:%M'))
+            row += 1
+        
+        # Sütun genişliklerini ayarla
+        for col in range(1, len(task_headers) + 1):
+            ws_tasks.column_dimensions[chr(64 + col)].width = 20
+        
+        # Excel dosyasını memory'de oluştur
+        from io import BytesIO
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'planlama_arsivi_{year}.xlsx'
+        )
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @api.route('/departments/simple', methods=['GET'])
 @login_required
 def list_simple_departments():
@@ -1112,6 +1252,24 @@ def mark_notification_read(notif_id):
     except Exception:
         db.session.rollback()
     return jsonify({'success': True})
+
+@api.route('/notifications/delete-all', methods=['DELETE'])
+@login_required
+def delete_all_notifications():
+    """Kullanıcının tüm bildirimlerini sil"""
+    try:
+        # Kullanıcının tüm bildirimlerini sil
+        deleted_count = Notification.query.filter_by(to_user_id=current_user.id).delete()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{deleted_count} bildirim başarıyla silindi',
+            'deleted_count': deleted_count
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # Hedef yönetimi
 @api.route('/targets', methods=['GET'])
