@@ -1694,89 +1694,90 @@ def get_representatives_report():
         # Filtreleme parametreleri
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
-    # Varsayılan: içinde bulunulan ay
-    if not start_date and not end_date:
-        today = datetime.now().date()
-        first = today.replace(day=1)
-        # next month first day then minus one day
-        if first.month == 12:
-            next_first = first.replace(year=first.year+1, month=1, day=1)
-        else:
-            next_first = first.replace(month=first.month+1, day=1)
-        last = next_first - timedelta(days=1)
-        start_date = first.isoformat()
-        end_date = last.isoformat()
-    
-    # Erişim kapsamındaki kullanıcıları getir
-    scoped_ids = get_scoped_user_ids()
-    users_query = User.query.filter(User.is_active == True)
-    if scoped_ids is not None:
-        users_query = users_query.filter(User.id.in_(scoped_ids))
-    
-    # Sadece satış departmanı kullanıcılarını getir
-    satis_department = Department.query.filter(
-        Department.name.ilike('%satış%')
-    ).first()
-    
-    if satis_department:
-        users_query = users_query.filter(User.department_id == satis_department.id)
-    
-    representatives = users_query.all()
-    
-    report_data = []
-    
-    for rep in representatives:
-        # Satış sorgusu
-        sales_query = Sales.query.filter_by(representative_id=rep.id)
-        returns_query = Returns.query.filter_by(representative_id=rep.id)
         
-        # Tarih filtreleme - PostgreSQL ve SQLite uyumlu
-        if start_date:
-            try:
-                start_date_parsed = datetime.strptime(start_date, '%Y-%m-%d').date()
-                sales_query = sales_query.filter(Sales.date >= start_date_parsed)
-                returns_query = returns_query.filter(Returns.date >= start_date_parsed)
-            except ValueError:
-                # Tarih formatı hatalıysa filtreleme yapma
-                pass
-        if end_date:
-            try:
-                end_date_parsed = datetime.strptime(end_date, '%Y-%m-%d').date()
-                sales_query = sales_query.filter(Sales.date <= end_date_parsed)
-                returns_query = returns_query.filter(Returns.date <= end_date_parsed)
-            except ValueError:
-                # Tarih formatı hatalıysa filtreleme yapma
-                pass
+        # Varsayılan: içinde bulunulan ay
+        if not start_date and not end_date:
+            today = datetime.now().date()
+            first = today.replace(day=1)
+            # next month first day then minus one day
+            if first.month == 12:
+                next_first = first.replace(year=first.year+1, month=1, day=1)
+            else:
+                next_first = first.replace(month=first.month+1, day=1)
+            last = next_first - timedelta(days=1)
+            start_date = first.isoformat()
+            end_date = last.isoformat()
         
-        # Toplam değerler
-        total_sales = sales_query.with_entities(func.sum(Sales.net_price)).scalar() or 0
-        total_returns = returns_query.with_entities(func.sum(Returns.net_price)).scalar() or 0
-        net_sales = total_sales - total_returns
+        # Erişim kapsamındaki kullanıcıları getir
+        scoped_ids = get_scoped_user_ids()
+        users_query = User.query.filter(User.is_active == True)
+        if scoped_ids is not None:
+            users_query = users_query.filter(User.id.in_(scoped_ids))
         
-        # Hedef bilgisi
-        current_year = datetime.now().year
-        current_month = datetime.now().month
-        target = Target.query.filter_by(
-            user_id=rep.id,
-            year=current_year,
-            month=current_month
+        # Sadece satış departmanı kullanıcılarını getir
+        satis_department = Department.query.filter(
+            Department.name.ilike('%satış%')
         ).first()
         
-        target_amount = target.target_amount if target else 0
-        target_completion = (net_sales / target_amount * 100) if target_amount > 0 else 0
+        if satis_department:
+            users_query = users_query.filter(User.department_id == satis_department.id)
         
-        report_data.append({
-            'representative_id': rep.id,
-            'representative_name': rep.get_full_name() or "Bilinmeyen Temsilci",
-            'representative_code': rep.representative_code or "",
-            'total_sales': total_sales,
-            'total_returns': total_returns,
-            'net_sales': net_sales,
-            'return_rate': (total_returns / total_sales * 100) if total_sales > 0 else 0,
-            'target_amount': target_amount,
-            'target_completion': target_completion
-        })
-    
+        representatives = users_query.all()
+        
+        report_data = []
+        
+        for rep in representatives:
+            # Satış sorgusu
+            sales_query = Sales.query.filter_by(representative_id=rep.id)
+            returns_query = Returns.query.filter_by(representative_id=rep.id)
+            
+            # Tarih filtreleme - PostgreSQL ve SQLite uyumlu
+            if start_date:
+                try:
+                    start_date_parsed = datetime.strptime(start_date, '%Y-%m-%d').date()
+                    sales_query = sales_query.filter(Sales.date >= start_date_parsed)
+                    returns_query = returns_query.filter(Returns.date >= start_date_parsed)
+                except ValueError:
+                    # Tarih formatı hatalıysa filtreleme yapma
+                    pass
+            if end_date:
+                try:
+                    end_date_parsed = datetime.strptime(end_date, '%Y-%m-%d').date()
+                    sales_query = sales_query.filter(Sales.date <= end_date_parsed)
+                    returns_query = returns_query.filter(Returns.date <= end_date_parsed)
+                except ValueError:
+                    # Tarih formatı hatalıysa filtreleme yapma
+                    pass
+            
+            # Toplam değerler
+            total_sales = sales_query.with_entities(func.sum(Sales.net_price)).scalar() or 0
+            total_returns = returns_query.with_entities(func.sum(Returns.net_price)).scalar() or 0
+            net_sales = total_sales - total_returns
+            
+            # Hedef bilgisi
+            current_year = datetime.now().year
+            current_month = datetime.now().month
+            target = Target.query.filter_by(
+                user_id=rep.id,
+                year=current_year,
+                month=current_month
+            ).first()
+            
+            target_amount = target.target_amount if target else 0
+            target_completion = (net_sales / target_amount * 100) if target_amount > 0 else 0
+            
+            report_data.append({
+                'representative_id': rep.id,
+                'representative_name': rep.get_full_name() or "Bilinmeyen Temsilci",
+                'representative_code': rep.representative_code or "",
+                'total_sales': total_sales,
+                'total_returns': total_returns,
+                'net_sales': net_sales,
+                'return_rate': (total_returns / total_sales * 100) if total_sales > 0 else 0,
+                'target_amount': target_amount,
+                'target_completion': target_completion
+            })
+        
         return jsonify({'representatives': report_data}), 200
         
     except Exception as e:
