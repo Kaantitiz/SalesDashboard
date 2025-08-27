@@ -119,6 +119,7 @@ def create_app():
                         print("[MIGRATION] SQLite: department_permission.actions sütunu eklendi")
                 except Exception as e:
                     print(f"[MIGRATION] department_permission.actions kontrol/ekleme hatası: {e}")
+            
             # Satış Departmanı için varsayılan unvan ve kullanıcı unvanlarını ayarla
             try:
                 sales_dept = Department.query.filter_by(name='Satış Departmanı').first()
@@ -140,6 +141,7 @@ def create_app():
             except Exception as e:
                 db.session.rollback()
                 print(f"[MIGRATION] satış departmanı unvan güncelleme hatası: {e}")
+            
             # Teknik Dizel (Admin) departmanı oluştur ve tam yetki ver
             try:
                 tech_dept = Department.query.filter_by(name='Teknik Dizel').first()
@@ -571,4 +573,4 @@ if __name__ == '__main__':
     
     # Production'da debug=False olmalı
     debug_mode = os.environ.get('FLASK_ENV') == 'development'
-    app.run(debug=debug_mode, host='0.0.0.0', port=int(os.environ.get('PORT', 5000))) 
+    app.run(debug=debug_mode, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
