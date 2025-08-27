@@ -57,32 +57,65 @@ def create_app():
                 # ÖNEMLİ: planning tablosunu düşürme kaldırıldı – veriler korunmalı
                 # 'user' tablosunda department_role kolonu yoksa ekle
                 try:
-                    info = db.session.execute(text("PRAGMA table_info('user')")).fetchall()
-                    columns = [row[1] for row in info]
-                    if 'department_role' not in columns:
-                        db.session.execute(text("ALTER TABLE user ADD COLUMN department_role VARCHAR(100)"))
-                        db.session.commit()
-                        print("[MIGRATION] user.department_role sütunu eklendi")
+                    if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://'):
+                        # PostgreSQL için sütun varlığını kontrol etme
+                        result = db.session.execute(text(
+                            "SELECT 1 FROM information_schema.columns WHERE table_name = 'user' AND column_name = 'department_role'"
+                        )).scalar()
+                        if not result:
+                            db.session.execute(text("ALTER TABLE \"user\" ADD COLUMN department_role VARCHAR(100)"))
+                            db.session.commit()
+                            print("[MIGRATION] PostgreSQL: user.department_role sütunu eklendi")
+                    else:
+                        # SQLite için
+                        info = db.session.execute(text("PRAGMA table_info('user')")).fetchall()
+                        columns = [row[1] for row in info]
+                        if 'department_role' not in columns:
+                            db.session.execute(text("ALTER TABLE user ADD COLUMN department_role VARCHAR(100)"))
+                            db.session.commit()
+                            print("[MIGRATION] SQLite: user.department_role sütunu eklendi")
                 except Exception as e:
                     print(f"[MIGRATION] department_role kontrol/ekleme hatası: {e}")
             # 'department' tablosunda default_role_title kolonu yoksa ekle
             try:
-                info = db.session.execute(text("PRAGMA table_info('department')")).fetchall()
-                columns = [row[1] for row in info]
-                if 'default_role_title' not in columns:
-                    db.session.execute(text("ALTER TABLE department ADD COLUMN default_role_title VARCHAR(100)"))
-                    db.session.commit()
-                    print("[MIGRATION] department.default_role_title sütunu eklendi")
+                if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://'):
+                    # PostgreSQL için sütun varlığını kontrol etme
+                    result = db.session.execute(text(
+                        "SELECT 1 FROM information_schema.columns WHERE table_name = 'department' AND column_name = 'default_role_title'"
+                    )).scalar()
+                    if not result:
+                        db.session.execute(text("ALTER TABLE department ADD COLUMN default_role_title VARCHAR(100)"))
+                        db.session.commit()
+                        print("[MIGRATION] PostgreSQL: department.default_role_title sütunu eklendi")
+                else:
+                    # SQLite için
+                    info = db.session.execute(text("PRAGMA table_info('department')")).fetchall()
+                    columns = [row[1] for row in info]
+                    if 'default_role_title' not in columns:
+                        db.session.execute(text("ALTER TABLE department ADD COLUMN default_role_title VARCHAR(100)"))
+                        db.session.commit()
+                        print("[MIGRATION] SQLite: department.default_role_title sütunu eklendi")
             except Exception as e:
                 print(f"[MIGRATION] default_role_title kontrol/ekleme hatası: {e}")
             # 'department_permission' tablosunda actions kolonu yoksa ekle (granüler izinler)
             try:
-                info = db.session.execute(text("PRAGMA table_info('department_permission')")).fetchall()
-                columns = [row[1] for row in info]
-                if 'actions' not in columns:
-                    db.session.execute(text("ALTER TABLE department_permission ADD COLUMN actions TEXT"))
-                    db.session.commit()
-                    print("[MIGRATION] department_permission.actions sütunu eklendi")
+                if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://'):
+                    # PostgreSQL için sütun varlığını kontrol etme
+                    result = db.session.execute(text(
+                        "SELECT 1 FROM information_schema.columns WHERE table_name = 'department_permission' AND column_name = 'actions'"
+                    )).scalar()
+                    if not result:
+                        db.session.execute(text("ALTER TABLE department_permission ADD COLUMN actions TEXT"))
+                        db.session.commit()
+                        print("[MIGRATION] PostgreSQL: department_permission.actions sütunu eklendi")
+                else:
+                    # SQLite için
+                    info = db.session.execute(text("PRAGMA table_info('department_permission')")).fetchall()
+                    columns = [row[1] for row in info]
+                    if 'actions' not in columns:
+                        db.session.execute(text("ALTER TABLE department_permission ADD COLUMN actions TEXT"))
+                        db.session.commit()
+                        print("[MIGRATION] SQLite: department_permission.actions sütunu eklendi")
             except Exception as e:
                 print(f"[MIGRATION] department_permission.actions kontrol/ekleme hatası: {e}")
             # Satış Departmanı için varsayılan unvan ve kullanıcı unvanlarını ayarla
