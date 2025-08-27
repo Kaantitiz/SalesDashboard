@@ -1,0 +1,5 @@
+[33m0094b13[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m API hataları düzeltildi: representative ilişkisi düzeltildi
+[33ma15d250[m Bildirim silme ve Excel export özellikleri eklendi
+[33md397a43[m Git merge conflict'leri düzeltildi, dosyalar temizlendi
+[33mb34b5f9[m PostgreSQL migration ile kalıcı veri saklama
+[33macb9831[m Added powerful migration script to restore all data

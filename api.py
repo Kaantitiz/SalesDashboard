@@ -1415,7 +1415,7 @@ def get_representative_targets(representative_id):
         
         return jsonify({
             'success': True,
-            'representative_name': representative.get_full_name(),
+            'representative_name': representative.get_full_name() if representative else 'Bilinmeyen Temsilci',
             'targets': targets_data
         }), 200
         
@@ -2727,10 +2727,16 @@ def create_plan():
         
         # Temsilciyi kontrol et
         representative = User.query.get(representative_id)
-        if not representative or not representative.is_representative():
+        if not representative:
             return jsonify({
                 'success': False,
-                'error': 'Geçersiz temsilci'
+                'error': 'Temsilci bulunamadı'
+            }), 400
+        
+        if not representative.is_representative():
+            return jsonify({
+                'success': False,
+                'error': 'Bu kullanıcı temsilci değil'
             }), 400
         
         # Aynı ay için plan var mı kontrol et
@@ -2757,7 +2763,7 @@ def create_plan():
         db.session.add(new_plan)
         db.session.commit()
         
-        log_activity('plan_create', f'Aylık hedef planı oluşturuldu: {representative.get_full_name()} - {year}/{month:02d}')
+        log_activity('plan_create', f'Aylık hedef planı oluşturuldu: {representative.get_full_name() if representative else "Bilinmeyen Temsilci"} - {year}/{month:02d}')
         
         return jsonify({
             'success': True,
