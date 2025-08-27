@@ -1690,9 +1690,10 @@ def get_summary_report():
 @admin_or_department_manager_required
 def get_representatives_report():
     """Admin/Departman Yöneticisi: kapsamındaki kullanıcıların performans raporu"""
-    # Filtreleme parametreleri
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
+    try:
+        # Filtreleme parametreleri
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
     # Varsayılan: içinde bulunulan ay
     if not start_date and not end_date:
         today = datetime.now().date()
@@ -1729,13 +1730,23 @@ def get_representatives_report():
         sales_query = Sales.query.filter_by(representative_id=rep.id)
         returns_query = Returns.query.filter_by(representative_id=rep.id)
         
-        # Tarih filtreleme
+        # Tarih filtreleme - PostgreSQL ve SQLite uyumlu
         if start_date:
-            sales_query = sales_query.filter(Sales.date >= start_date)
-            returns_query = returns_query.filter(Returns.date >= start_date)
+            try:
+                start_date_parsed = datetime.strptime(start_date, '%Y-%m-%d').date()
+                sales_query = sales_query.filter(Sales.date >= start_date_parsed)
+                returns_query = returns_query.filter(Returns.date >= start_date_parsed)
+            except ValueError:
+                # Tarih formatı hatalıysa filtreleme yapma
+                pass
         if end_date:
-            sales_query = sales_query.filter(Sales.date <= end_date)
-            returns_query = returns_query.filter(Returns.date <= end_date)
+            try:
+                end_date_parsed = datetime.strptime(end_date, '%Y-%m-%d').date()
+                sales_query = sales_query.filter(Sales.date <= end_date_parsed)
+                returns_query = returns_query.filter(Returns.date <= end_date_parsed)
+            except ValueError:
+                # Tarih formatı hatalıysa filtreleme yapma
+                pass
         
         # Toplam değerler
         total_sales = sales_query.with_entities(func.sum(Sales.net_price)).scalar() or 0
@@ -1766,7 +1777,14 @@ def get_representatives_report():
             'target_completion': target_completion
         })
     
-    return jsonify({'representatives': report_data}), 200
+        return jsonify({'representatives': report_data}), 200
+        
+    except Exception as e:
+        print(f"[ERROR] Representatives report hatası: {e}")
+        return jsonify({
+            'error': 'Temsilci performans raporu yüklenirken hata oluştu',
+            'details': str(e)
+        }), 500
 
 
 
@@ -2291,14 +2309,25 @@ def get_sales_charts_data():
             brand_product_query = brand_product_query.filter(Sales.representative_id == query_filter['representative_id'])
         brand_product_sales = brand_product_query.group_by(Sales.brand, Sales.product_group).all()
         
-        # Aylık satış trendi (son 12 ay) - SQLite uyumlu
-        monthly_query = db.session.query(
-            func.strftime('%Y-%m', Sales.date).label('month'),
-            func.sum(Sales.net_price).label('total_sales')
-        )
-        if query_filter:
-            monthly_query = monthly_query.filter(Sales.representative_id == query_filter['representative_id'])
-        monthly_sales = monthly_query.group_by(func.strftime('%Y-%m', Sales.date)).order_by('month').limit(12).all()
+        # Aylık satış trendi (son 12 ay) - PostgreSQL ve SQLite uyumlu
+        if db.session.bind.dialect.name == 'postgresql':
+            # PostgreSQL için TO_CHAR kullan
+            monthly_query = db.session.query(
+                func.to_char(Sales.date, 'YYYY-MM').label('month'),
+                func.sum(Sales.net_price).label('total_sales')
+            )
+            if query_filter:
+                monthly_query = monthly_query.filter(Sales.representative_id == query_filter['representative_id'])
+            monthly_sales = monthly_query.group_by(func.to_char(Sales.date, 'YYYY-MM')).order_by('month').limit(12).all()
+        else:
+            # SQLite için strftime kullan
+            monthly_query = db.session.query(
+                func.strftime('%Y-%m', Sales.date).label('month'),
+                func.sum(Sales.net_price).label('total_sales')
+            )
+            if query_filter:
+                monthly_query = monthly_query.filter(Sales.representative_id == query_filter['representative_id'])
+            monthly_sales = monthly_query.group_by(func.strftime('%Y-%m', Sales.date)).order_by('month').limit(12).all()
 
         return jsonify({
             'success': True,
