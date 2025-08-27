@@ -22,7 +22,7 @@ def create_app():
             db.create_all()
             
             # PostgreSQL migration kontrolü
-            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://'):
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://') or app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql+pg8000://'):
                 print("✅ PostgreSQL veritabanı kullanılıyor - veriler kalıcı olarak saklanacak")
                 
                 # Admin kullanıcısı kontrol et
@@ -219,7 +219,7 @@ def create_app():
     def login():
         # Güvenlik: kullanıcı tablosu kolonlarını garanti altına al
         try:
-            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://'):
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://') or app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql+pg8000://'):
                 # PostgreSQL için sütun varlığını kontrol etme
                 result = db.session.execute(text(
                     "SELECT 1 FROM information_schema.columns WHERE table_name = 'user' AND column_name = 'department_role'"
@@ -381,7 +381,7 @@ def create_app():
     def db_migrate():
         try:
             # 'user' tablosunda department_role kolonu yoksa ekle
-            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://'):
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://') or app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql+pg8000://'):
                 # PostgreSQL için sütun varlığını kontrol etme
                 result = db.session.execute(text(
                     "SELECT 1 FROM information_schema.columns WHERE table_name = 'user' AND column_name = 'department_role'"
@@ -407,7 +407,7 @@ def create_app():
     @app.route('/db-info')
     def db_info():
         try:
-            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://'):
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://') or app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql+pg8000://'):
                 # PostgreSQL için
                 # Aktif veritabanı bilgisi
                 db_name = db.session.execute(text("SELECT current_database()")).scalar()
@@ -443,7 +443,7 @@ def create_app():
             db.create_all()
             # Basit migration: user.department_role kolonu ekle (yoksa)
             try:
-                if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://'):
+                if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://') or app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql+pg8000://'):
                     # PostgreSQL için sütun varlığını kontrol etme
                     result = db.session.execute(text(
                         "SELECT 1 FROM information_schema.columns WHERE table_name = 'user' AND column_name = 'department_role'"
