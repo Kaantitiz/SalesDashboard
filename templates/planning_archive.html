@@ -209,7 +209,7 @@ async function openArchiveCalendar(year, month, userId){
     if (!modalBody) return;
     // Rebuild modal content so repeated opens always have calendar container
     modalBody.innerHTML = '<div class="table-responsive"><table class="table table-bordered align-middle text-center" id="archiveCalendarTable"></table></div>' +
-        (document.body.getAttribute('data-is-admin')==='true' ? '<div class="text-end mt-2"><button type="button" class="btn btn-sm btn-outline-danger" id="deleteDayPlansBtn">Planları Sil</button></div>' : '');
+        (document.body.getAttribute('data-is-admin')==='true' ? '<div class="text-end mt-2"><button type="button" class="btn btn-sm btn-outline-danger" id="deleteDayPlansBtn">Ayın Tüm Plan ve Görevlerini Sil</button></div>' : '');
     const table = document.getElementById('archiveCalendarTable');
     document.getElementById('archiveCalendarTitle').textContent = `${d.year}-${String(d.month).padStart(2,'0')} Ayı`;
     const header = document.createElement('tr');
@@ -242,13 +242,25 @@ async function openArchiveCalendar(year, month, userId){
     const delBtn = modal.querySelector('#deleteDayPlansBtn');
     if (delBtn){
         delBtn.onclick = async ()=>{
-            if (!confirm('Bu günün plan/snapshot kayıtları silinsin mi?')) return;
+            if (!confirm(`Bu ayın (${d.year}-${String(d.month).padStart(2,'0')}) tüm planları ve görevleri silinsin mi?\n\n⚠️ Bu işlem geri alınamaz!`)) return;
             try {
                 const uid = window.__archiveCalendarUserId || (document.getElementById('archiveUserSelect').value || '');
                 const qs = uid ? `&user_id=${uid}` : '';
-                const res = await fetch(`/api/planning/day?date=${d.year}-${String(d.month).padStart(2,'0')}-01${qs}`, { method: 'DELETE' });
-                // Not: Delete endpoint expects exact day; burada sadece butonu gün detayında göstermek daha doğru, ama pratik olarak admin önce bir güne tıklayıp yan panelde planları görüp oradan sil butonuna basabilir. Buradaki buton, detayda da bağlanacak.
-            } catch {}
+                const res = await fetch(`/api/planning/month/delete?year=${d.year}&month=${d.month}${qs}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) {
+                    alert(`✅ ${result.message}\n\nSilinen kayıt sayısı: ${result.deleted_count}`);
+                    // Modal'ı kapat ve sayfayı yenile
+                    const modalInstance = bootstrap.Modal.getInstance(modal);
+                    modalInstance.hide();
+                    // Sayfayı yenile
+                    location.reload();
+                } else {
+                    throw new Error(result.error || 'Silme işlemi başarısız');
+                }
+            } catch (error) {
+                alert(`❌ Hata: ${error.message || 'Bilinmeyen hata'}`);
+            }
         };
     }
 }

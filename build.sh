@@ -1,15 +1,24 @@
-#!/usr/bin/env bash
-# exit on error
-set -o errexit
+#!/bin/bash
 
-echo "🚀 Build başlıyor..."
+echo "🚀 WTC Sales Dashboard Build Script"
+echo "==================================="
 
-echo "📦 Paketler yükleniyor..."
+# Python bağımlılıklarını yükle
+echo "📦 Python bağımlılıkları yükleniyor..."
 pip install -r requirements.txt
-echo "✅ Paketler yüklendi"
 
-echo "🗄️ SQLite veritabanı oluşturuluyor..."
-python simple_db.py
-echo "✅ SQLite veritabanı oluşturuldu"
+# PostgreSQL bağımlılığını kontrol et
+echo "🔍 PostgreSQL bağımlılığı kontrol ediliyor..."
+if ! python -c "import psycopg2" 2>/dev/null; then
+    echo "❌ psycopg2 bulunamadı. Yükleniyor..."
+    pip install psycopg2-binary
+else
+    echo "✅ psycopg2 zaten yüklü"
+fi
+
+# Gerekli dizinleri oluştur
+echo "📁 Gerekli dizinler oluşturuluyor..."
+mkdir -p uploads
+mkdir -p instance
 
 echo "🎉 Build tamamlandı!"

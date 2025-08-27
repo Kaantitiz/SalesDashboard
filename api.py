@@ -133,8 +133,10 @@ def planning_today():
 @login_required
 def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
-    # Only admin can delete any task; DM can delete tasks in their department they manage; users cannot delete
+    
+    # Admin: Tüm görevleri silebilir
     if current_user.is_admin():
+        print(f"[ADMIN] Admin {current_user.username} görev {task_id} silmeye çalışıyor")
         pass
     elif current_user.is_department_manager():
         # DM: Kendi departmanına ait tüm görevleri silebilir.
@@ -158,13 +160,40 @@ def delete_task(task_id):
             return jsonify({'success': False, 'error': 'Silme yetkiniz yok'}), 403
     else:
         return jsonify({'success': False, 'error': 'Silme yetkiniz yok'}), 403
+    
     try:
+        # Görev bilgilerini logla
+        task_info = {
+            'id': task.id,
+            'title': getattr(task, 'title', 'N/A'),
+            'department_id': getattr(task, 'department_id', None),
+            'assigned_to_id': getattr(task, 'assigned_to_id', None),
+            'created_by_id': getattr(task, 'created_by_id', None)
+        }
+        
+        # Görevi sil
         db.session.delete(task)
         db.session.commit()
-        # Best-effort: cache/summary tutarlı olsun diye bir şey döndür
-        return jsonify({'success': True, 'deleted_id': task_id})
+        
+        # Activity log ekle
+        try:
+            log = ActivityLog(
+                user_id=current_user.id,
+                action='task_deleted',
+                description=f'Görev silindi: {task_info["id"]} - {task_info["title"]}'
+            )
+            db.session.add(log)
+            db.session.commit()
+        except Exception as e:
+            print(f"Activity log hatası: {e}")
+            db.session.rollback()
+        
+        print(f"[SUCCESS] Görev {task_id} başarıyla silindi. Silen: {current_user.username}")
+        return jsonify({'success': True, 'deleted_id': task_id, 'message': 'Görev başarıyla silindi'})
+        
     except Exception as e:
         db.session.rollback()
+        print(f"[ERROR] Görev silme hatası: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @api.route('/planning/months', methods=['GET'])
@@ -3080,6 +3109,7 @@ def manage_user(user_id):
                 user.username = f"{user.username}_deleted_{user.id}"
             except Exception:
                 pass
+            # Email alanı artık nullable, None olarak ayarlayabiliriz
             user.email = None
             user.representative_code = None
             db.session.commit()
@@ -3263,4 +3293,120 @@ def reassign_user_records(from_user_id: int):
         return jsonify({'success': True, 'message': 'Satış ve iade kayıtları devredildi'}), 200
     except Exception as e:
         db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@api.route('/planning/month/delete', methods=['DELETE'])
+@admin_required
+def delete_month_planning_and_tasks():
+    """Admin: Belirli bir ay için tüm planları ve görevleri sil"""
+    try:
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
+        user_id = request.args.get('user_id', type=int)
+        
+        if not year or not month:
+            return jsonify({'success': False, 'error': 'Yıl ve ay parametreleri gerekli'}), 400
+        
+        # Tarih aralığını hesapla
+        start_date = date(year, month, 1)
+        if month == 12:
+            end_date = date(year + 1, 1, 1)
+        else:
+            end_date = date(year, month + 1, 1)
+        
+        deleted_count = 0
+        
+        # Kullanıcı belirtilmişse sadece o kullanıcının verilerini sil
+        if user_id:
+            # Planları sil
+            plans = Planning.query.filter(
+                Planning.representative_id == user_id,
+                Planning.date >= start_date,
+                Planning.date < end_date
+            ).all()
+            
+            for plan in plans:
+                db.session.delete(plan)
+                deleted_count += 1
+            
+            # Planning snapshot'ları sil
+            snapshots = PlanningSnapshot.query.filter(
+                PlanningSnapshot.representative_id == user_id,
+                PlanningSnapshot.date >= start_date,
+                PlanningSnapshot.date < end_date
+            ).all()
+            
+            for snapshot in snapshots:
+                db.session.delete(snapshot)
+                deleted_count += 1
+            
+            # Görevleri sil (o aya ait olanlar)
+            tasks = Task.query.filter(
+                (Task.assigned_to_id == user_id) | (Task.created_by_id == user_id),
+                Task.start_date >= start_date,
+                Task.start_date < end_date
+            ).all()
+            
+            for task in tasks:
+                db.session.delete(task)
+                deleted_count += 1
+                
+        else:
+            # Tüm kullanıcıların verilerini sil
+            # Planları sil
+            plans = Planning.query.filter(
+                Planning.date >= start_date,
+                Planning.date < end_date
+            ).all()
+            
+            for plan in plans:
+                db.session.delete(plan)
+                deleted_count += 1
+            
+            # Planning snapshot'ları sil
+            snapshots = PlanningSnapshot.query.filter(
+                PlanningSnapshot.date >= start_date,
+                PlanningSnapshot.date < end_date
+            ).all()
+            
+            for snapshot in snapshots:
+                db.session.delete(snapshot)
+                deleted_count += 1
+            
+            # Görevleri sil (o aya ait olanlar)
+            tasks = Task.query.filter(
+                Task.start_date >= start_date,
+                Task.start_date < end_date
+            ).all()
+            
+            for task in tasks:
+                db.session.delete(task)
+                deleted_count += 1
+        
+        db.session.commit()
+        
+        # Activity log ekle
+        try:
+            month_name = f"{year}-{month:02d}"
+            user_info = f" (Kullanıcı: {user_id})" if user_id else " (Tüm kullanıcılar)"
+            log = ActivityLog(
+                user_id=current_user.id,
+                action='month_planning_deleted',
+                description=f'{month_name} ayı planları ve görevleri silindi{user_info} - Toplam: {deleted_count} kayıt'
+            )
+            db.session.add(log)
+            db.session.commit()
+        except Exception as e:
+            print(f"Activity log hatası: {e}")
+            db.session.rollback()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'{year}-{month:02d} ayı planları ve görevleri başarıyla silindi',
+            'deleted_count': deleted_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERROR] Aylık plan silme hatası: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500

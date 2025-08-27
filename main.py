@@ -41,22 +41,30 @@ def create_app():
                     db.session.add(admin)
                     db.session.commit()
                     print("👤 Admin kullanıcısı oluşturuldu: admin/admin123")
+                
+                # PostgreSQL için migration
+                try:
+                    # user tablosunda email sütununu nullable yap
+                    db.session.execute(text("ALTER TABLE \"user\" ALTER COLUMN email DROP NOT NULL"))
+                    db.session.commit()
+                    print("[MIGRATION] PostgreSQL: user.email sütunu nullable yapıldı")
+                except Exception as e:
+                    print(f"[MIGRATION] PostgreSQL email migration hatası: {e}")
             else:
                 print("🔧 SQLite veritabanı kullanılıyor (geliştirme ortamı)")
-            
-            # SQLite migration'ları (sadece geliştirme ortamında)
-            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('sqlite://'):
-            # ÖNEMLİ: planning tablosunu düşürme kaldırıldı – veriler korunmalı
-            # 'user' tablosunda department_role kolonu yoksa ekle
-            try:
-                info = db.session.execute(text("PRAGMA table_info('user')")).fetchall()
-                columns = [row[1] for row in info]
-                if 'department_role' not in columns:
-                    db.session.execute(text("ALTER TABLE user ADD COLUMN department_role VARCHAR(100)"))
-                    db.session.commit()
-                    print("[MIGRATION] user.department_role sütunu eklendi")
-            except Exception as e:
-                print(f"[MIGRATION] department_role kontrol/ekleme hatası: {e}")
+                
+                # SQLite migration'ları (sadece geliştirme ortamında)
+                # ÖNEMLİ: planning tablosunu düşürme kaldırıldı – veriler korunmalı
+                # 'user' tablosunda department_role kolonu yoksa ekle
+                try:
+                    info = db.session.execute(text("PRAGMA table_info('user')")).fetchall()
+                    columns = [row[1] for row in info]
+                    if 'department_role' not in columns:
+                        db.session.execute(text("ALTER TABLE user ADD COLUMN department_role VARCHAR(100)"))
+                        db.session.commit()
+                        print("[MIGRATION] user.department_role sütunu eklendi")
+                except Exception as e:
+                    print(f"[MIGRATION] department_role kontrol/ekleme hatası: {e}")
             # 'department' tablosunda default_role_title kolonu yoksa ekle
             try:
                 info = db.session.execute(text("PRAGMA table_info('department')")).fetchall()

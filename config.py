@@ -18,8 +18,14 @@ class Config:
             SQLALCHEMY_DATABASE_URI = DATABASE_URL
             print("✅ PostgreSQL bağlantısı kuruldu")
         except ImportError:
-            print("⚠️ PostgreSQL paketi bulunamadı, SQLite kullanılıyor")
-            SQLALCHEMY_DATABASE_URI = 'sqlite:///sales_dashboard.db'
+            print("⚠️ PostgreSQL paketi bulunamadı, psycopg2-binary yükleniyor...")
+            import subprocess
+            import sys
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "psycopg2-binary"])
+            import psycopg2
+            DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+            SQLALCHEMY_DATABASE_URI = DATABASE_URL
+            print("✅ PostgreSQL bağlantısı kuruldu")
     else:
         # Geliştirme ortamında SQLite kullan
         if os.environ.get('FLASK_ENV') == 'development':
@@ -27,7 +33,8 @@ class Config:
             print("🔧 Geliştirme ortamında SQLite kullanılıyor")
         else:
             # Production ortamında PostgreSQL gerekli
-            raise ValueError("Production ortamında DATABASE_URL environment variable gerekli!")
+            SQLALCHEMY_DATABASE_URI = 'sqlite:///sales_dashboard.db'  # Geçici olarak SQLite
+            print("⚠️ Production ortamında DATABASE_URL bulunamadı, SQLite kullanılıyor")
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
@@ -42,8 +49,8 @@ class Config:
     TARGET_VALUE = 100000000  # 100 milyon TL
     MONTHLY_TARGET = 10000000  # 10 milyon TL aylık
     
-    # Dosya yükleme ayarları
-    UPLOAD_FOLDER = 'uploads'
+    # Dosya yükleme ayarları - Kalıcı depolama için
+    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/opt/render/project/src/uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
     
     # Renk paleti

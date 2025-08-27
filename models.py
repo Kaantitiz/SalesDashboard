@@ -44,7 +44,7 @@ class DepartmentPermission(db.Model):
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.Enum(UserRole), default=UserRole.USER)
     first_name = db.Column(db.String(50), nullable=False)
@@ -65,10 +65,25 @@ class User(UserMixin, db.Model):
     
     # İlişkiler
     targets = db.relationship('Target', backref='user', lazy=True)
-    sales = db.relationship('Sales', backref='representative', lazy=True)
-    returns = db.relationship('Returns', backref='representative', lazy=True)
+    # İlişki çakışmasını önlemek için basitleştirildi
+    # sales = db.relationship('Sales', backref='representative', lazy=True)
+    # returns = db.relationship('Returns', backref='representative', lazy=True)
     plans = db.relationship('Planning', backref='representative', lazy=True)
-    activity_logs = db.relationship('ActivityLog', lazy=True, cascade='all, delete-orphan')
+    
+    # Basit ve güvenli ilişkiler
+    def get_sales(self):
+        """Kullanıcının satışlarını getir"""
+        from models import Sales
+        return Sales.query.filter_by(representative_id=self.id).all()
+    
+    def get_returns(self):
+        """Kullanıcının iadelerini getir"""
+        from models import Returns
+        return Returns.query.filter_by(representative_id=self.id).all()
+    
+    # İlişki çakışmasını önlemek için geçici olarak kaldırıldı
+    # activity_logs = db.relationship('ActivityLog', backref='user', lazy=True, cascade='all, delete-orphan')
+    # task_comments = db.relationship('TaskComment', backref='user', lazy=True, cascade='all, delete-orphan')
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -208,6 +223,9 @@ class Sales(db.Model):
     original_date = db.Column(db.String(20), nullable=True)      # TARIH alanından
     original_product_group = db.Column(db.String(100), nullable=True)  # URUN_ANA_GRUP alanından
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # İlişki çakışmasını önlemek için kaldırıldı
+    # representative = db.relationship('User', backref='sales')
 
 class Returns(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -228,6 +246,9 @@ class Returns(db.Model):
     original_date = db.Column(db.String(20), nullable=True)      # TARIH alanından
     original_product_group = db.Column(db.String(100), nullable=True)  # URUN_ANA_GRUP alanından
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # İlişki çakışmasını önlemek için kaldırıldı
+    # representative = db.relationship('User', backref='returns')
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -246,7 +267,8 @@ class ActivityLog(db.Model):
     ip_address = db.Column(db.String(45), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    user = db.relationship('User') 
+    # İlişki çakışmasını önlemek için foreign key kullanıldı
+    # user = db.relationship('User', viewonly=True, overlaps="activity_logs")
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -305,4 +327,5 @@ class TaskComment(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     task = db.relationship('Task', backref=db.backref('comments', lazy=True, cascade='all, delete-orphan'))
-    user = db.relationship('User')
+    # İlişki çakışmasını önlemek için foreign key kullanıldı
+    # user = db.relationship('User', viewonly=True, overlaps="task_comments")
