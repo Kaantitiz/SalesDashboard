@@ -7,14 +7,9 @@ echo "==================================="
 echo "📦 Python bağımlılıkları yükleniyor..."
 pip install -r requirements.txt
 
-# PostgreSQL bağımlılığını kontrol et
+# PostgreSQL bağımlılığı requirements.txt'den yükleniyor
 echo "🔍 PostgreSQL bağımlılığı kontrol ediliyor..."
-if ! python -c "import psycopg2" 2>/dev/null; then
-    echo "❌ psycopg2 bulunamadı. Yükleniyor..."
-    pip install psycopg2-binary
-else
-    echo "✅ psycopg2 zaten yüklü"
-fi
+python -c "import psycopg2; print('✅ psycopg2 başarıyla yüklendi')" || echo "❌ psycopg2 yüklenemedi"
 
 # Gerekli dizinleri oluştur
 echo "📁 Gerekli dizinler oluşturuluyor..."
