@@ -2020,7 +2020,7 @@ def get_recent_sales():
         'sales': [{
             'id': sale.id,
             'representative_id': sale.representative_id,
-            'representative_name': sale.representative.get_full_name() if sale.representative else 'Bilinmeyen Temsilci',
+            'representative_name': User.query.get(sale.representative_id).get_full_name() if sale.representative_id else 'Bilinmeyen Temsilci',
             'date': sale.date.isoformat(),
             'date_formatted': sale.original_date or (sale.date.strftime('%d.%m.%Y') if sale.date else 'Tarih Yok'),
             'product_group': sale.original_product_group or sale.product_group,
@@ -2061,7 +2061,7 @@ def get_recent_returns():
         'returns': [{
             'id': ret.id,
             'representative_id': ret.representative_id,
-            'representative_name': ret.representative.get_full_name() if ret.representative else 'Bilinmeyen Temsilci',
+            'representative_name': User.query.get(ret.representative_id).get_full_name() if ret.representative_id else 'Bilinmeyen Temsilci',
             'date': ret.date.isoformat(),
             'date_formatted': ret.original_date or (ret.date.strftime('%d.%m.%Y') if ret.date else 'Tarih Yok'),
             'product_group': ret.original_product_group or ret.product_group,
