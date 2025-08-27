@@ -13,12 +13,21 @@ class Config:
             DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
         
         try:
-            # Test connection
-            import psycopg2
-            SQLALCHEMY_DATABASE_URI = DATABASE_URL
-            print("✅ PostgreSQL bağlantısı kuruldu")
-        except ImportError:
-            print("❌ psycopg2 bulunamadı, SQLite kullanılıyor")
+            # Test connection - önce psycopg2, sonra pg8000 dene
+            try:
+                import psycopg2
+                SQLALCHEMY_DATABASE_URI = DATABASE_URL
+                print("✅ PostgreSQL bağlantısı kuruldu (psycopg2)")
+            except ImportError:
+                try:
+                    import pg8000
+                    SQLALCHEMY_DATABASE_URI = DATABASE_URL
+                    print("✅ PostgreSQL bağlantısı kuruldu (pg8000)")
+                except ImportError:
+                    print("❌ PostgreSQL driver bulunamadı, SQLite kullanılıyor")
+                    SQLALCHEMY_DATABASE_URI = 'sqlite:///sales_dashboard.db'
+        except Exception as e:
+            print(f"❌ PostgreSQL bağlantı hatası: {e}, SQLite kullanılıyor")
             SQLALCHEMY_DATABASE_URI = 'sqlite:///sales_dashboard.db'
     else:
         # Geliştirme ortamında SQLite kullan
