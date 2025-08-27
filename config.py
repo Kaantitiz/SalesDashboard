@@ -45,8 +45,9 @@ class Config:
             print("🔧 Geliştirme ortamında SQLite kullanılıyor")
         else:
             # Production ortamında PostgreSQL gerekli
-            SQLALCHEMY_DATABASE_URI = 'sqlite:///sales_dashboard.db'  # Geçici olarak SQLite
-            print("⚠️ Production ortamında DATABASE_URL bulunamadı, SQLite kullanılıyor")
+            print("❌ Production ortamında DATABASE_URL bulunamadı!")
+            print("⚠️ PostgreSQL bağlantısı kurulamadığı için uygulama başlatılamayacak")
+            raise ValueError("Production ortamında DATABASE_URL environment variable gerekli!")
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
