@@ -216,11 +216,21 @@ def create_app():
     def login():
         # Güvenlik: kullanıcı tablosu kolonlarını garanti altına al
         try:
-            info = db.session.execute(text("PRAGMA table_info('user')")).fetchall()
-            columns = [row[1] for row in info]
-            if 'department_role' not in columns:
-                db.session.execute(text("ALTER TABLE user ADD COLUMN department_role VARCHAR(100)"))
-                db.session.commit()
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://'):
+                # PostgreSQL için sütun varlığını kontrol etme
+                result = db.session.execute(text(
+                    "SELECT 1 FROM information_schema.columns WHERE table_name = 'user' AND column_name = 'department_role'"
+                )).scalar()
+                if not result:
+                    db.session.execute(text("ALTER TABLE \"user\" ADD COLUMN department_role VARCHAR(100)"))
+                    db.session.commit()
+            else:
+                # SQLite için
+                info = db.session.execute(text("PRAGMA table_info('user')")).fetchall()
+                columns = [row[1] for row in info]
+                if 'department_role' not in columns:
+                    db.session.execute(text("ALTER TABLE user ADD COLUMN department_role VARCHAR(100)"))
+                    db.session.commit()
         except Exception:
             db.session.rollback()
         if current_user.is_authenticated:
@@ -368,12 +378,23 @@ def create_app():
     def db_migrate():
         try:
             # 'user' tablosunda department_role kolonu yoksa ekle
-            info = db.session.execute(text("PRAGMA table_info('user')")).fetchall()
-            columns = [row[1] for row in info]
-            changed = False
-            if 'department_role' not in columns:
-                db.session.execute(text("ALTER TABLE user ADD COLUMN department_role VARCHAR(100)"))
-                changed = True
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://'):
+                # PostgreSQL için sütun varlığını kontrol etme
+                result = db.session.execute(text(
+                    "SELECT 1 FROM information_schema.columns WHERE table_name = 'user' AND column_name = 'department_role'"
+                )).scalar()
+                changed = False
+                if not result:
+                    db.session.execute(text("ALTER TABLE \"user\" ADD COLUMN department_role VARCHAR(100)"))
+                    changed = True
+            else:
+                # SQLite için
+                info = db.session.execute(text("PRAGMA table_info('user')")).fetchall()
+                columns = [row[1] for row in info]
+                changed = False
+                if 'department_role' not in columns:
+                    db.session.execute(text("ALTER TABLE user ADD COLUMN department_role VARCHAR(100)"))
+                    changed = True
             db.session.commit()
             return jsonify({'message': 'Migration OK', 'changed': changed}), 200
         except Exception as e:
@@ -383,16 +404,32 @@ def create_app():
     @app.route('/db-info')
     def db_info():
         try:
-            # Aktif veritabanı dosyası
-            db_list = db.session.execute(text("PRAGMA database_list")).fetchall()
-            # user tablosu kolonları
-            info = db.session.execute(text("PRAGMA table_info('user')")).fetchall()
-            columns = [row[1] for row in info]
-            return jsonify({
-                'database_list': [tuple(row) for row in db_list],
-                'user_columns': columns,
-                'uri': app.config.get('SQLALCHEMY_DATABASE_URI')
-            })
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://'):
+                # PostgreSQL için
+                # Aktif veritabanı bilgisi
+                db_name = db.session.execute(text("SELECT current_database()")).scalar()
+                # user tablosu kolonları
+                result = db.session.execute(text(
+                    "SELECT column_name FROM information_schema.columns WHERE table_name = 'user' ORDER BY ordinal_position"
+                )).fetchall()
+                columns = [row[0] for row in result]
+                return jsonify({
+                    'database_name': db_name,
+                    'user_columns': columns,
+                    'uri': app.config.get('SQLALCHEMY_DATABASE_URI')
+                })
+            else:
+                # SQLite için
+                # Aktif veritabanı dosyası
+                db_list = db.session.execute(text("PRAGMA database_list")).fetchall()
+                # user tablosu kolonları
+                info = db.session.execute(text("PRAGMA table_info('user')")).fetchall()
+                columns = [row[1] for row in info]
+                return jsonify({
+                    'database_list': [tuple(row) for row in db_list],
+                    'user_columns': columns,
+                    'uri': app.config.get('SQLALCHEMY_DATABASE_URI')
+                })
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
@@ -403,12 +440,23 @@ def create_app():
             db.create_all()
             # Basit migration: user.department_role kolonu ekle (yoksa)
             try:
-                info = db.session.execute(text("PRAGMA table_info('user')")).fetchall()
-                columns = [row[1] for row in info]
-                if 'department_role' not in columns:
-                    db.session.execute(text("ALTER TABLE user ADD COLUMN department_role VARCHAR(100)"))
-                    db.session.commit()
-                    print("department_role sütunu eklendi")
+                if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://'):
+                    # PostgreSQL için sütun varlığını kontrol etme
+                    result = db.session.execute(text(
+                        "SELECT 1 FROM information_schema.columns WHERE table_name = 'user' AND column_name = 'department_role'"
+                    )).scalar()
+                    if not result:
+                        db.session.execute(text("ALTER TABLE \"user\" ADD COLUMN department_role VARCHAR(100)"))
+                        db.session.commit()
+                        print("PostgreSQL: department_role sütunu eklendi")
+                else:
+                    # SQLite için
+                    info = db.session.execute(text("PRAGMA table_info('user')")).fetchall()
+                    columns = [row[1] for row in info]
+                    if 'department_role' not in columns:
+                        db.session.execute(text("ALTER TABLE user ADD COLUMN department_role VARCHAR(100)"))
+                        db.session.commit()
+                        print("SQLite: department_role sütunu eklendi")
             except Exception as e:
                 print(f"department_role sütunu kontrol/ekleme hatası: {e}")
             
