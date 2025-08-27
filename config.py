@@ -4,21 +4,30 @@ from datetime import timedelta
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-here'
     
-    # Veritabanı URL'i - Geçici olarak SQLite kullan
+    # Veritabanı URL'i - PostgreSQL öncelikli
     DATABASE_URL = os.environ.get('DATABASE_URL')
-    if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
-        # PostgreSQL URL'i varsa kullan, yoksa SQLite
+    
+    if DATABASE_URL:
+        # PostgreSQL URL'i varsa kullan
+        if DATABASE_URL.startswith('postgres://'):
+            DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+        
         try:
             # Test connection
             import psycopg2
-            DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
             SQLALCHEMY_DATABASE_URI = DATABASE_URL
             print("✅ PostgreSQL bağlantısı kuruldu")
         except ImportError:
             print("⚠️ PostgreSQL paketi bulunamadı, SQLite kullanılıyor")
             SQLALCHEMY_DATABASE_URI = 'sqlite:///sales_dashboard.db'
     else:
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///sales_dashboard.db'
+        # Geliştirme ortamında SQLite kullan
+        if os.environ.get('FLASK_ENV') == 'development':
+            SQLALCHEMY_DATABASE_URI = 'sqlite:///sales_dashboard.db'
+            print("🔧 Geliştirme ortamında SQLite kullanılıyor")
+        else:
+            # Production ortamında PostgreSQL gerekli
+            raise ValueError("Production ortamında DATABASE_URL environment variable gerekli!")
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     

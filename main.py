@@ -15,11 +15,37 @@ def create_app():
     # Veritabanı başlatma
     db.init_app(app)
 
-    # Basit başlangıç migrasyonları (SQLite)
+    # Veritabanı başlatma ve migration
     with app.app_context():
         try:
-            # Tabloları oluştur (yeni tablolar için)
+            # Tabloları oluştur
             db.create_all()
+            
+            # PostgreSQL migration kontrolü
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql://'):
+                print("✅ PostgreSQL veritabanı kullanılıyor - veriler kalıcı olarak saklanacak")
+                
+                # Admin kullanıcısı kontrol et
+                admin = User.query.filter_by(username='admin').first()
+                if not admin:
+                    from werkzeug.security import generate_password_hash
+                    admin = User(
+                        username='admin',
+                        email='admin@company.com',
+                        first_name='Admin',
+                        last_name='User',
+                        role=UserRole.ADMIN,
+                        is_active=True,
+                        password_hash=generate_password_hash('admin123')
+                    )
+                    db.session.add(admin)
+                    db.session.commit()
+                    print("👤 Admin kullanıcısı oluşturuldu: admin/admin123")
+            else:
+                print("🔧 SQLite veritabanı kullanılıyor (geliştirme ortamı)")
+            
+            # SQLite migration'ları (sadece geliştirme ortamında)
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('sqlite://'):
             # ÖNEMLİ: planning tablosunu düşürme kaldırıldı – veriler korunmalı
             # 'user' tablosunda department_role kolonu yoksa ekle
             try:
